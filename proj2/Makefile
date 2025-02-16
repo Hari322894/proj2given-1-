@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall
+CXXFLAGS = -std=c++17 -Wall -Isrc
 OBJDIR = obj
 BINDIR = bin
 
@@ -33,6 +33,10 @@ $(BINDIR)/testdsv: $(OBJDIR)/DSVReader.o $(OBJDIR)/DSVWriter.o $(OBJDIR)/DSVTest
 
 $(BINDIR)/testxml: $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o $(OBJDIR)/XMLTest.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(OBJDIR)/StringUtils.o: src/StringUtils.cpp src/StringUtils.h
+	@mkdir -p $(OBJDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: src/%.cpp
 	@mkdir -p $(OBJDIR)
