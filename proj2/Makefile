@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Isrc
+CXXFLAGS = -std=c++17 -Wall -Isrc -MP -MMD
 OBJDIR = obj
 BINDIR = bin
 
@@ -9,6 +9,9 @@ TEST_SOURCES = testsrc/DSVTest.cpp testsrc/StringDataSinkTest.cpp testsrc/String
 
 OBJECTS = $(SOURCES:%.cpp=$(OBJDIR)/%.o)
 TEST_OBJECTS = $(TEST_SOURCES:%.cpp=$(OBJDIR)/%.o)
+
+# Dependency files
+DEPS = $(OBJECTS:.o=.d) $(TEST_OBJECTS:.o=.d)
 
 # Executables
 EXECUTABLES = $(BINDIR)/teststrutils $(BINDIR)/teststrdatasource $(BINDIR)/teststrdatasink $(BINDIR)/testdsv $(BINDIR)/testxml
@@ -34,10 +37,6 @@ $(BINDIR)/testdsv: $(OBJDIR)/DSVReader.o $(OBJDIR)/DSVWriter.o $(OBJDIR)/DSVTest
 $(BINDIR)/testxml: $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o $(OBJDIR)/XMLTest.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(OBJDIR)/StringUtils.o: src/StringUtils.cpp src/StringUtils.h
-	@mkdir -p $(OBJDIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
 $(OBJDIR)/%.o: src/%.cpp
 	@mkdir -p $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -60,3 +59,5 @@ directories:
 clean:
 	rm -rf $(OBJDIR)
 	rm -rf $(BINDIR)
+
+-include $(DEPS)
