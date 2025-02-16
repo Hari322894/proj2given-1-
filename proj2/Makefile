@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Iinclude
-LDFLAGS = -lexpat  # For Expat library
+LDFLAGS = -lexpat -lgtest -lgtest_main -pthread  # Added Google Test libraries
 
 # Directories
 OBJDIR = obj
@@ -34,7 +34,7 @@ $(OBJDIR)/%.o: testsrc/%.cpp
 
 # Link object files to create executables
 $(BINDIR)/testdsv: $(OBJDIR)/DSVReader.o $(OBJDIR)/DSVWriter.o $(OBJDIR)/DSVTest.o
-	$(CXX) $(CXXFLAGS) $^ -o $@
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 $(BINDIR)/testxml: $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o $(OBJDIR)/XMLTest.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
