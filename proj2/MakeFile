@@ -1,0 +1,62 @@
+CXX = g++
+
+CXXFLAGS = -std=c++17 -Wall
+
+OBJDIR = obj
+
+BINDIR = bin
+
+SOURCES = StringUtils.cpp StringUtilsTest.cpp
+
+OBJECTS = $(SOURCES:%.cpp=$(OBJDIR)/%.o)
+
+EXEC = $(BINDIR)/teststrutils
+
+
+all: directories runtests
+
+
+runtests: $(TARGET)
+
+        $(TARGET)
+
+
+
+
+$(TARGET): $(OBJ_FILES)
+
+   $(CXX) $(CFLAGS) $(CPPFLAGS) $(OBJ_FILES) $(LDFLAGS) -o $(TARGET)
+
+
+$(OBJ_DR)/%.o: $(SRC_DIR)/%.cpp
+
+	$(CXX) $(CFLAGS) $(CPPFLAGS) $(DEFINES) $(INCLUDE) -c $< -o $@
+
+
+$(OBJ_DR)/%.o: $(TESTSRC_DIR)/%.cpp
+
+	$(CXX) $(CFLAGS) $(CPPFLAGS) $(DEFINES) $(INCLUDE) -c $< -o $@
+
+
+$(EXEC): $(OBJECTS)
+
+	$(CXX) $(CXXFLAGS) $^ -o $(EXEC)
+
+
+test: $(EXEC)
+
+	./$(EXEC)
+
+
+directories:
+
+  mkdir -p $(BIN_DIR)
+
+  mkdir -p $(OBJ_DIR)
+
+
+clean:
+
+	rm -rf $(OBJDIR) 
+
+	rm -rf $(BINDIR) 
