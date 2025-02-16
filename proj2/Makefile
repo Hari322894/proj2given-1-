@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Isrc -MP -MMD
+CXXFLAGS = -std=c++17 -Wall -Iinclude -MP -MMD
 OBJDIR = obj
 BINDIR = bin
 
@@ -7,8 +7,8 @@ BINDIR = bin
 SOURCES = src/DSVReader.cpp src/DSVWriter.cpp src/StringDataSink.cpp src/StringDataSource.cpp src/StringUtils.cpp src/XMLReader.cpp src/XMLWriter.cpp
 TEST_SOURCES = testsrc/DSVTest.cpp testsrc/StringDataSinkTest.cpp testsrc/StringDataSourceTest.cpp testsrc/StringUtilsTest.cpp testsrc/XMLTest.cpp
 
-OBJECTS = $(SOURCES:%.cpp=$(OBJDIR)/%.o)
-TEST_OBJECTS = $(TEST_SOURCES:%.cpp=$(OBJDIR)/%.o)
+OBJECTS = $(SOURCES:src/%.cpp=$(OBJDIR)/%.o)
+TEST_OBJECTS = $(TEST_SOURCES:testsrc/%.cpp=$(OBJDIR)/%.o)
 
 # Dependency files
 DEPS = $(OBJECTS:.o=.d) $(TEST_OBJECTS:.o=.d)
@@ -37,12 +37,12 @@ $(BINDIR)/testdsv: $(OBJDIR)/DSVReader.o $(OBJDIR)/DSVWriter.o $(OBJDIR)/DSVTest
 $(BINDIR)/testxml: $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o $(OBJDIR)/XMLTest.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(OBJDIR)/%.o: src/%.cpp
-	@mkdir -p $(OBJDIR)
+# Compile source files
+$(OBJDIR)/%.o: src/%.cpp | directories
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJDIR)/%.o: testsrc/%.cpp
-	@mkdir -p $(OBJDIR)
+# Compile test files
+$(OBJDIR)/%.o: testsrc/%.cpp | directories
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 test: $(EXECUTABLES)
