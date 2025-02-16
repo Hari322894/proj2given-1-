@@ -60,3 +60,40 @@ clean:
 	rm -rf $(OBJDIR) 
 
 	rm -rf $(BINDIR) 
+
+	CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Iinclude
+LDFLAGS = -lexpat
+OBJDIR = obj
+BINDIR = bin
+
+# Targets for executables
+TARGETS = $(BINDIR)/driver $(BINDIR)/teststrutils $(BINDIR)/teststrdatasource $(BINDIR)/teststrdatasink $(BINDIR)/testdsv $(BINDIR)/testxml
+
+all: $(TARGETS)
+
+# Rule to create object files
+$(OBJDIR)/%.o: src/%.cpp
+	@mkdir -p $(OBJDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Rule to create binaries
+$(BINDIR)/%: $(OBJDIR)/%.o
+	@mkdir -p $(BINDIR)
+	$(CXX) $^ -o $@ $(LDFLAGS)
+
+# Driver executable
+$(BINDIR)/driver: $(OBJDIR)/driver.o $(OBJDIR)/DSVReader.o $(OBJDIR)/DSVWriter.o $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o
+	$(CXX) $^ -o $@ $(LDFLAGS)
+
+# Test targets
+test: all
+	@echo "Running tests..."
+	$(BINDIR)/teststrutils
+	$(BINDIR)/teststrdatasource
+	$(BINDIR)/teststrdatasink
+	$(BINDIR)/testdsv
+	$(BINDIR)/testxml
+
+clean:
+	rm -rf $(OBJDIR) $(BINDIR)
