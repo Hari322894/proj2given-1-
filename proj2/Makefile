@@ -9,7 +9,9 @@ OBJ_DIR = obj
 BIN_DIR = bin
 INCLUDE_DIR = include
 GTEST_DIR = googletest
-GTEST_LIB = $(OBJ_DIR)/libgtest.a
+GTEST_BUILD_DIR = $(GTEST_DIR)/build
+GTEST_LIB = $(GTEST_BUILD_DIR)/lib/libgtest.a
+GTEST_MAIN_LIB = $(GTEST_BUILD_DIR)/lib/libgtest_main.a
 
 # Find all source and test files
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
@@ -25,15 +27,14 @@ TEST_EXECUTABLES := $(patsubst $(OBJ_DIR)/%.o, $(BIN_DIR)/%, $(TEST_OBJ_FILES))
 # Default target
 all: setup_gtest directories $(TEST_EXECUTABLES)
 
-# Download and build GoogleTest
+# Download and build GoogleTest using CMake
 setup_gtest:
-	@mkdir -p $(OBJ_DIR)
 	@if [ ! -d "$(GTEST_DIR)" ]; then \
 		echo "Cloning GoogleTest..."; \
-		git clone https://github.com/google/googletest.git $(GTEST_DIR); \
+		git clone --depth=1 https://github.com/google/googletest.git $(GTEST_DIR); \
 	fi
-	@$(CXX) $(CXXFLAGS) -isystem $(GTEST_DIR)/googletest/include -pthread -c $(GTEST_DIR)/googletest/src/gtest-all.cc -o $(OBJ_DIR)/gtest-all.o
-	@ar rcs $(GTEST_LIB) $(OBJ_DIR)/gtest-all.o
+	@mkdir -p $(GTEST_BUILD_DIR)
+	@cd $(GTEST_BUILD_DIR) && cmake .. && make -j
 
 # Compile source files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
@@ -45,8 +46,8 @@ $(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
 	@mkdir -p $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -isystem $(GTEST_DIR)/googletest/include -c $< -o $@
 
-# Link test executables
-$(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_FILES) $(GTEST_LIB)
+# Link test executables with GoogleTest
+$(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_FILES) $(GTEST_LIB) $(GTEST_MAIN_LIB)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@ -pthread
 
