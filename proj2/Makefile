@@ -1,68 +1,66 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++17 -Iinclude -pthread
-LDFLAGS = -pthread -lexpat  # Add -lexpat here
+CXXFLAGS = -std=c++17 -Wall -Iinclude
 
 # Directories
-SRC_DIR = src
-TEST_DIR = testsrc
-OBJ_DIR = obj
-BIN_DIR = bin
-INCLUDE_DIR = include
-GTEST_DIR = googletest
-GTEST_BUILD_DIR = $(GTEST_DIR)/build
-GTEST_LIB = $(GTEST_BUILD_DIR)/lib/libgtest.a
-GTEST_MAIN_LIB = $(GTEST_BUILD_DIR)/lib/libgtest_main.a
+OBJDIR = obj
+BINDIR = bin
 
-# Find all source and test files
-SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
-TEST_FILES := $(wildcard $(TEST_DIR)/*.cpp)
+# Source and object files
+SOURCES = src/StringUtils.cpp src/StringDataSource.cpp src/StringDataSink.cpp src/DSVReader.cpp src/DSVWriter.cpp src/XMLReader.cpp src/XMLWriter.cpp
+TEST_SOURCES = testsrc/StringUtilsTest.cpp testsrc/StringDataSourceTest.cpp testsrc/StringDataSinkTest.cpp testsrc/DSVTest.cpp testsrc/XMLTest.cpp
 
-# Convert source files to object files
-OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC_FILES))
-TEST_OBJ_FILES := $(patsubst $(TEST_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(TEST_FILES))
+OBJECTS = $(SOURCES:%.cpp=$(OBJDIR)/%.o)
+TEST_OBJECTS = $(TEST_SOURCES:%.cpp=$(OBJDIR)/%.o)
 
-# Convert test object files to executables
-TEST_EXECUTABLES := $(patsubst $(OBJ_DIR)/%.o, $(BIN_DIR)/%, $(TEST_OBJ_FILES))
+# Executables
+EXECUTABLES = $(BINDIR)/teststrutils $(BINDIR)/teststrdatasource $(BINDIR)/teststrdatasink $(BINDIR)/testdsv $(BINDIR)/testxml
 
-# Default target
-all: setup_gtest directories $(TEST_EXECUTABLES)
+# Targets
+all: directories $(EXECUTABLES)
 
-# Download and build GoogleTest using CMake
-setup_gtest:
-	@if [ ! -d "$(GTEST_DIR)" ]; then \
-		echo "Cloning GoogleTest..."; \
-		git clone --depth=1 https://github.com/google/googletest.git $(GTEST_DIR); \
-	fi
-	@mkdir -p $(GTEST_BUILD_DIR)
-	@cd $(GTEST_BUILD_DIR) && cmake .. && make -j
+# Create directories
+directories:
+	mkdir -p $(BINDIR)
+	mkdir -p $(OBJDIR)
 
 # Compile source files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	@mkdir -p $(OBJ_DIR)
+$(OBJDIR)/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Compile test files
-$(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
-	@mkdir -p $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -isystem $(GTEST_DIR)/googletest/include -c $< -o $@
+# Compile test source files
+$(OBJDIR)/%.o: testsrc/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Link test executables with GoogleTest and Expat
-$(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_FILES) $(GTEST_LIB) $(GTEST_MAIN_LIB)
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)  # Ensure LDFLAGS is used here
+# Link object files to create executables
+$(BINDIR)/teststrutils: $(OBJDIR)/StringUtils.o $(OBJDIR)/StringUtilsTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
-# Create directories if not present
-directories:
-	@mkdir -p $(BIN_DIR) $(OBJ_DIR)
+$(BINDIR)/teststrdatasource: $(OBJDIR)/StringDataSource.o $(OBJDIR)/StringDataSourceTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(BINDIR)/teststrdatasink: $(OBJDIR)/StringDataSink.o $(OBJDIR)/StringDataSinkTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(BINDIR)/testdsv: $(OBJDIR)/DSVReader.o $(OBJDIR)/DSVWriter.o $(OBJDIR)/DSVTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(BINDIR)/testxml: $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o $(OBJDIR)/XMLTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
 # Run tests
-test: all
-	@echo "Running tests..."
-	@for test in $(TEST_EXECUTABLES); do $$test; done
+test: $(EXECUTABLES)
+	$(BINDIR)/teststrutils
+	$(BINDIR)/teststrdatasource
+	$(BINDIR)/teststrdatasink
+	$(BINDIR)/testdsv
+	$(BINDIR)/testxml
 
-# Clean build artifacts
+# Clean up
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR) $(GTEST_DIR)
+	rm -rf $(OBJDIR)
+	rm -rf $(BINDIR)
 
-.PHONY: all directories test clean
+.PHONY: all test clean directories
