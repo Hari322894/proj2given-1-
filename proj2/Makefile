@@ -17,22 +17,16 @@ TEST_FILES = $(wildcard $(TEST_DIR)/*.cpp)
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC_FILES))
 TEST_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(TEST_FILES))
 
-# Output binaries
+# Output binary
 TARGET = $(BIN_DIR)/testproj2
-DRIVER = $(BIN_DIR)/driver
 
 # Default target
-all: $(TARGET) $(DRIVER)
+all: $(TARGET)
 
 # Rule to build the final binary
 $(TARGET): $(OBJ_FILES) $(TEST_OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
-
-# Rule to build the driver binary
-$(DRIVER): $(OBJ_FILES) driver.cpp
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(OBJ_FILES) driver.cpp -o $@ $(LDFLAGS)
 
 # Rule to compile source files into object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
