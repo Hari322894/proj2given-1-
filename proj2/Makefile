@@ -1,6 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++17 -Iinclude -pthread
+LDFLAGS = -pthread -lexpat  # Add -lexpat here
 
 # Directories
 SRC_DIR = src
@@ -46,10 +47,10 @@ $(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
 	@mkdir -p $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -isystem $(GTEST_DIR)/googletest/include -c $< -o $@
 
-# Link test executables with GoogleTest
+# Link test executables with GoogleTest and Expat
 $(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_FILES) $(GTEST_LIB) $(GTEST_MAIN_LIB)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@ -pthread
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)  # Ensure LDFLAGS is used here
 
 # Create directories if not present
 directories:
