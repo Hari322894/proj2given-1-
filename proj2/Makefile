@@ -2,35 +2,54 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall
 OBJDIR = obj
 BINDIR = bin
-SOURCES = StringUtils.cpp StringUtilsTest.cpp
-OBJECTS = $(SOURCES:%.cpp=$(OBJDIR)/%.o)
-EXEC = $(BINDIR)/teststrutils
 
+# Source and object files
+SOURCES = src/StringUtils.cpp src/StringDataSource.cpp src/StringDataSink.cpp src/DSVReader.cpp src/DSVWriter.cpp src/XMLReader.cpp src/XMLWriter.cpp
+TEST_SOURCES = testsrc/StringUtilsTest.cpp testsrc/StringDataSourceTest.cpp testsrc/StringDataSinkTest.cpp testsrc/DSVTest.cpp testsrc/XMLTest.cpp
+
+OBJECTS = $(SOURCES:%.cpp=$(OBJDIR)/%.o)
+TEST_OBJECTS = $(TEST_SOURCES:%.cpp=$(OBJDIR)/%.o)
+
+# Executables
+EXECUTABLES = $(BINDIR)/teststrutils $(BINDIR)/teststrdatasource $(BINDIR)/teststrdatasink $(BINDIR)/testdsv $(BINDIR)/testxml
+
+# Targets
 all: directories runtests
 
-runtests: $(TARGET)
-        $(TARGET)
+runtests: $(EXECUTABLES)
+	$(EXECUTABLES)
 
+$(BINDIR)/teststrutils: $(OBJDIR)/StringUtils.o $(OBJDIR)/StringUtilsTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
+$(BINDIR)/teststrdatasource: $(OBJDIR)/StringDataSource.o $(OBJDIR)/StringDataSourceTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(TARGET): $(OBJ_FILES)
-   $(CXX) $(CFLAGS) $(CPPFLAGS) $(OBJ_FILES) $(LDFLAGS) -o $(TARGET)
+$(BINDIR)/teststrdatasink: $(OBJDIR)/StringDataSink.o $(OBJDIR)/StringDataSinkTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(OBJ_DR)/%.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(DEFINES) $(INCLUDE) -c $< -o $@
+$(BINDIR)/testdsv: $(OBJDIR)/DSVReader.o $(OBJDIR)/DSVWriter.o $(OBJDIR)/DSVTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(OBJ_DR)/%.o: $(TESTSRC_DIR)/%.cpp
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(DEFINES) $(INCLUDE) -c $< -o $@
+$(BINDIR)/testxml: $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o $(OBJDIR)/XMLTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
-$(EXEC): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $^ -o $(EXEC)
+$(OBJDIR)/%.o: src/%.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-test: $(EXEC)
-	./$(EXEC)
+$(OBJDIR)/%.o: testsrc/%.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+test: $(EXECUTABLES)
+	$(BINDIR)/teststrutils
+	$(BINDIR)/teststrdatasource
+	$(BINDIR)/teststrdatasink
+	$(BINDIR)/testdsv
+	$(BINDIR)/testxml
 
 directories:
-  mkdir -p $(BIN_DIR)
-  mkdir -p $(OBJ_DIR)
+  mkdir -p $(BINDIR)
+  mkdir -p $(OBJDIR)
 
 clean:
 	rm -rf $(OBJDIR) 
