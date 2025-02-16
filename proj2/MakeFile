@@ -1,94 +1,46 @@
 CXX = g++
-
-CXXFLAGS = -std=c++17 -Wall
-
-OBJDIR = obj
-
-BINDIR = bin
-
-SOURCES = StringUtils.cpp StringUtilsTest.cpp
-
-OBJECTS = $(SOURCES:%.cpp=$(OBJDIR)/%.o)
-
-EXEC = $(BINDIR)/teststrutils
-
-
-all: directories runtests
-
-
-runtests: $(TARGET)
-
-        $(TARGET)
-
-
-
-
-$(TARGET): $(OBJ_FILES)
-
-   $(CXX) $(CFLAGS) $(CPPFLAGS) $(OBJ_FILES) $(LDFLAGS) -o $(TARGET)
-
-
-$(OBJ_DR)/%.o: $(SRC_DIR)/%.cpp
-
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(DEFINES) $(INCLUDE) -c $< -o $@
-
-
-$(OBJ_DR)/%.o: $(TESTSRC_DIR)/%.cpp
-
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(DEFINES) $(INCLUDE) -c $< -o $@
-
-
-$(EXEC): $(OBJECTS)
-
-	$(CXX) $(CXXFLAGS) $^ -o $(EXEC)
-
-
-test: $(EXEC)
-
-	./$(EXEC)
-
-
-directories:
-
-  mkdir -p $(BIN_DIR)
-
-  mkdir -p $(OBJ_DIR)
-
-
-clean:
-
-	rm -rf $(OBJDIR) 
-
-	rm -rf $(BINDIR) 
-
-	CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Iinclude
 LDFLAGS = -lexpat
 OBJDIR = obj
 BINDIR = bin
 
-# Targets for executables
-TARGETS = $(BINDIR)/driver $(BINDIR)/teststrutils $(BINDIR)/teststrdatasource $(BINDIR)/teststrdatasink $(BINDIR)/testdsv $(BINDIR)/testxml
+# Source files
+SOURCES = StringUtils.cpp StringUtilsTest.cpp StringDataSourceTest.cpp StringDataSinkTest.cpp DSVTest.cpp XMLTest.cpp
+OBJECTS = $(SOURCES:%.cpp=$(OBJDIR)/%.o)
 
-all: $(TARGETS)
+# Targets
+EXEC_TESTS = $(BINDIR)/teststrutils $(BINDIR)/teststrdatasource $(BINDIR)/teststrdatasink $(BINDIR)/testdsv $(BINDIR)/testxml
 
-# Rule to create object files
-$(OBJDIR)/%.o: src/%.cpp
+all: directories $(EXEC_TESTS)
+
+# Rules for creating each test executable
+$(BINDIR)/teststrutils: $(OBJDIR)/StringUtilsTest.o $(OBJDIR)/StringUtils.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(BINDIR)/teststrdatasource: $(OBJDIR)/StringDataSourceTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(BINDIR)/teststrdatasink: $(OBJDIR)/StringDataSinkTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(BINDIR)/testdsv: $(OBJDIR)/DSVTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(BINDIR)/testxml: $(OBJDIR)/XMLTest.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+# Rule for creating object files
+$(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Rule to create binaries
-$(BINDIR)/%: $(OBJDIR)/%.o
-	@mkdir -p $(BINDIR)
-	$(CXX) $^ -o $@ $(LDFLAGS)
+# Create directories if not present
+directories:
+	@mkdir -p $(BINDIR) $(OBJDIR)
 
-# Driver executable
-$(BINDIR)/driver: $(OBJDIR)/driver.o $(OBJDIR)/DSVReader.o $(OBJDIR)/DSVWriter.o $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o
-	$(CXX) $^ -o $@ $(LDFLAGS)
-
-# Test targets
-test: all
-	@echo "Running tests..."
+# Run tests in the specified order
+test: $(EXEC_TESTS)
+	@echo "Running tests in order..."
 	$(BINDIR)/teststrutils
 	$(BINDIR)/teststrdatasource
 	$(BINDIR)/teststrdatasink
