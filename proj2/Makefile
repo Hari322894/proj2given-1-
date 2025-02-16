@@ -4,8 +4,8 @@ OBJDIR = obj
 BINDIR = bin
 
 # Source and object files
-SOURCES = src/StringUtils.cpp src/StringDataSource.cpp src/StringDataSink.cpp src/DSVReader.cpp src/DSVWriter.cpp src/XMLReader.cpp src/XMLWriter.cpp
-TEST_SOURCES = testsrc/StringUtilsTest.cpp testsrc/StringDataSourceTest.cpp testsrc/StringDataSinkTest.cpp testsrc/DSVTest.cpp testsrc/XMLTest.cpp
+SOURCES = src/DSVReader.cpp src/DSVWriter.cpp src/StringDataSink.cpp src/StringDataSource.cpp src/StringUtils.cpp src/XMLReader.cpp src/XMLWriter.cpp
+TEST_SOURCES = testsrc/DSVTest.cpp testsrc/StringDataSinkTest.cpp testsrc/StringDataSourceTest.cpp testsrc/StringUtilsTest.cpp testsrc/XMLTest.cpp
 
 OBJECTS = $(SOURCES:%.cpp=$(OBJDIR)/%.o)
 TEST_OBJECTS = $(TEST_SOURCES:%.cpp=$(OBJDIR)/%.o)
@@ -14,7 +14,7 @@ TEST_OBJECTS = $(TEST_SOURCES:%.cpp=$(OBJDIR)/%.o)
 EXECUTABLES = $(BINDIR)/teststrutils $(BINDIR)/teststrdatasource $(BINDIR)/teststrdatasink $(BINDIR)/testdsv $(BINDIR)/testxml
 
 # Targets
-all: directories runtests
+all: directories $(EXECUTABLES)
 
 runtests: $(EXECUTABLES)
 	$(EXECUTABLES)
@@ -35,9 +35,11 @@ $(BINDIR)/testxml: $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o $(OBJDIR)/XMLTest
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 $(OBJDIR)/%.o: src/%.cpp
+	@mkdir -p $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: testsrc/%.cpp
+	@mkdir -p $(OBJDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 test: $(EXECUTABLES)
@@ -48,9 +50,9 @@ test: $(EXECUTABLES)
 	$(BINDIR)/testxml
 
 directories:
-  mkdir -p $(BINDIR)
-  mkdir -p $(OBJDIR)
+	@mkdir -p $(BINDIR)
+	@mkdir -p $(OBJDIR)
 
 clean:
-	rm -rf $(OBJDIR) 
-	rm -rf $(BINDIR) 
+	rm -rf $(OBJDIR)
+	rm -rf $(BINDIR)
