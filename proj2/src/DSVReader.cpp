@@ -23,8 +23,10 @@ struct CDSVReader::SImplementation {
         bool inQuotes = false;
         //check to see if any data was read
         bool dataRead = false;
-        // State to track if the previous character was a quote
-        bool pendingQuote = false;
+        // Track if we've seen any non-whitespace characters in the current cell
+        bool hasContent = false;
+        // Track if we started with a quote
+        bool startedWithQuote = false;
 
         //loop till end of data source
         while (!DataSource->End()) {
@@ -34,61 +36,77 @@ struct CDSVReader::SImplementation {
             }
             //data has been read
             dataRead = true;
-            //creating an if statement to handle the quotes
+
+            // Handle start of cell
+            if (cell.empty() && !hasContent && ch == '"') {
+                inQuotes = true;
+                startedWithQuote = true;
+                hasContent = true;
+                continue;
+            }
+
+            // Handle quotes
             if (ch == '"') {
                 if (inQuotes) {
-                    // If there was a pending quote, we treat it as an escaped quote
-                    if (pendingQuote) {
-                        cell += '"'; // add escaped quote to the cell
-                        pendingQuote = false; // reset
-                    } else {
-                        // If this quote is closing the quoted section, toggle inQuotes
-                        pendingQuote = true; // use this quote as pending for the next iteration
-                    }
-                } else {
-                    // Starting a quoted section
-                    inQuotes = true;
-                    pendingQuote = false; // clear any previous pending quote
-                }
-            } else {
-                if (pendingQuote) {
-                    // If the previous character was a quote and no second quote followed, end the quoted section
-                    inQuotes = false;
-                    pendingQuote = false;
-                }
-
-                if (ch == Delimiter && !inQuotes) {
-                    // Delimiter marks the end of the cell
-                    row.push_back(cell); // add completed cell to row
-                    cell.clear(); // clear for next value
-                } else if ((ch == '\n' || ch == '\r') && !inQuotes) {
-                    // end of row
-                    if (!cell.empty() || !row.empty()) {
-                        row.push_back(cell);
-                    }
-                    // handles a potential "\r\n" newline sequence
-                    if (ch == '\r' && !DataSource->End()) {
-                        // check if the current character is a \r
-                        // and see that we are not at the end of the data source
-                        char nextChar;
-                        if (DataSource->Get(nextChar) && nextChar == '\n') {
-                            // If the next character is a \n, this indicates
-                            // \r\n. We can simply skip over it as the row has been handled.
+                    // Check for escaped quotes
+                    if (!DataSource->End()) {
+                        char nextCh;
+                        if (DataSource->Get(nextCh)) {
+                            if (nextCh == '"') {
+                                cell += '"';
+                                continue;
+                            } else {
+                                // Put back the character we just read
+                                DataSource->Unget();
+                            }
                         }
                     }
-                    return true; // End of row has been reached when returning true
-                } else {
-                    // add regular character to the current cell
-                    cell += ch;
+                    inQuotes = false;
+                    continue;
+                } else if (cell.empty() || !hasContent) {
+                    inQuotes = true;
+                    continue;
                 }
+            }
+
+            // Handle delimiters and newlines
+            if (!inQuotes && (ch == Delimiter || ch == '\n' || ch == '\r')) {
+                // If we started with a quote and ended with a quote, keep the quotes in the output
+                if (startedWithQuote) {
+                    cell = '"' + cell + '"';
+                }
+                row.push_back(cell);
+                cell.clear();
+                hasContent = false;
+                startedWithQuote = false;
+
+                if (ch == '\n' || ch == '\r') {
+                    // Handle \r\n newline sequence
+                    if (ch == '\r' && !DataSource->End()) {
+                        char nextCh;
+                        if (DataSource->Get(nextCh) && nextCh != '\n') {
+                            DataSource->Unget();
+                        }
+                    }
+                    return true;
+                }
+                continue;
+            }
+
+            // Add character to cell
+            cell += ch;
+            if (!std::isspace(ch)) {
+                hasContent = true;
             }
         }
 
-        // add last cell if there was any data
+        // Handle last cell if there is one
         if (!cell.empty() || dataRead) {
+            if (startedWithQuote) {
+                cell = '"' + cell + '"';
+            }
             row.push_back(cell);
         }
-        // If any data was read then it would return true here at the end as I let it be true earlier
         return dataRead;
     }
 };
