@@ -60,8 +60,9 @@ struct CXMLReader::SImplementation {
             return true;
         }
 
-        char buffer[4096];
-        size_t length = DataSource->Read(buffer, sizeof(buffer));
+        std::vector<char> buffer(4096); // Use vector instead of char array
+        size_t length = DataSource->Read(buffer, buffer.size());
+
 
         if (length == 0) {
             return false;
