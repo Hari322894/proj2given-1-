@@ -50,7 +50,6 @@ struct CDSVReader::SImplementation {
                     } else {
                         // Starting a quoted section
                         inQuotes = true;
-                        cell += '"'; // Add the opening quote to the cell
                     }
                 } else if (ch == Delimiter && !inQuotes) { 
                     // Outside quotes, delimiter means end of cell
@@ -75,7 +74,6 @@ struct CDSVReader::SImplementation {
         
             return hasData;
         }
-        
         
 };
 
