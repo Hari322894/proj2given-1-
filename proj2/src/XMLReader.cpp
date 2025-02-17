@@ -135,10 +135,6 @@ struct CXMLReader::SImplementation {
                 charData += ch;
             }
             
-            while (!charData.empty() && std::isspace(charData.back())) {
-                charData.pop_back();
-            }
-            
             if (!skipcdata || !charData.empty()) {
                 entity.DType = SXMLEntity::EType::CharData;
                 entity.DNameData = DecodeEntities(charData);
@@ -158,7 +154,6 @@ struct CXMLReader::SImplementation {
             // End element
             entity.DType = SXMLEntity::EType::EndElement;
             entity.DNameData = ReadTagName();
-            // Skip to and consume '>'
             while (GetChar(ch) && ch != '>') {}
             return true;
         }
@@ -166,8 +161,6 @@ struct CXMLReader::SImplementation {
         // Start or complete element
         UngetChar(ch);
         entity.DNameData = ReadTagName();
-        
-        SkipWhitespace();
         ParseAttributes(entity);
         
         GetChar(ch);
@@ -180,7 +173,6 @@ struct CXMLReader::SImplementation {
     
         return true;
     }
-    
 };
 
 CXMLReader::CXMLReader(std::shared_ptr<CDataSource> src)
@@ -195,5 +187,3 @@ bool CXMLReader::End() const {
 bool CXMLReader::ReadEntity(SXMLEntity& entity, bool skipcdata) {
     return DImplementation->ReadEntity(entity, skipcdata);
 }
-
-
