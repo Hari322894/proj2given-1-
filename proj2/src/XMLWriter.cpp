@@ -55,9 +55,11 @@ struct CXMLWriter::SImplementation {
                 IndentationLevel++;
                 break;
 
-            case SXMLEntity::EType::EndElement:
+                case SXMLEntity::EType::EndElement:
                 IndentationLevel--;
-                AddIndentation(output);
+                if (IndentationLevel > 0) {
+                    AddIndentation(output);
+                }
                 output += "</" + entity.DNameData + ">";
                 break;
 
