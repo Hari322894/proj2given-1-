@@ -41,7 +41,7 @@ struct CXMLWriter::SImplementation {
                 if (!HasRootElement) {
                     HasRootElement = true;
                 } else {
-                    output = "\n\t";
+                    output = "\n\t\n\t"; // Add extra newline and tab
                 }
                 
                 output += "<" + entity.DNameData;
@@ -69,7 +69,7 @@ struct CXMLWriter::SImplementation {
                 if (!HasRootElement) {
                     HasRootElement = true;
                 } else {
-                    output = "\n\t";
+                    output = "\n\t\n\t"; // Add extra newline and tab
                 }
                 
                 output += "<" + entity.DNameData;
