@@ -19,7 +19,7 @@ struct CXMLWriter::SImplementation {
     // Helper function to escape special XML characters
     std::string EscapeString(const std::string &str) {
         std::string result;
-        result.reserve(str.size() * 2); // Reserve extra space for potential escapes
+        result.reserve(str.size() * 2);
         
         for (char c : str) {
             auto it = EscapeMap.find(c);
@@ -36,46 +36,48 @@ struct CXMLWriter::SImplementation {
     bool WriteEntity(const SXMLEntity &entity) {
         std::string output;
         
-        // Handle different entity types
         switch (entity.DType) {
-            case SXMLEntity::EType::StartElement:
+            case SXMLEntity::EType::StartElement: {
                 output = "<" + entity.DNameData;
                 
-                // Add attributes
+                // Add attributes in sorted order
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += ">";
                 break;
-                
+            }
+            
             case SXMLEntity::EType::EndElement:
                 output = "</" + entity.DNameData + ">";
                 break;
                 
             case SXMLEntity::EType::CharData:
+                // Preserve exact character data including whitespace
                 output = EscapeString(entity.DNameData);
                 break;
                 
-            case SXMLEntity::EType::CompleteElement:
+            case SXMLEntity::EType::CompleteElement: {
                 output = "<" + entity.DNameData;
                 
-                // Add attributes
+                // Add attributes in sorted order
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 
-                // Self-closing tag with proper XML syntax
+                // Self-closing tag
                 output += "/>";
                 break;
+            }
         }
         
-        // Write the output to the data sink
+        // Write the exact output to the data sink
         std::vector<char> outputChars(output.begin(), output.end());
         return DataSink->Write(outputChars);
     }
     
     bool Flush() {
-        return true; // No Flush() method in CDataSink
+        return true;
     }
 };
 
