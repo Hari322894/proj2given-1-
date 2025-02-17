@@ -24,14 +24,18 @@ struct CDSVReader::SImplementation {
                     // Check if the next character is another quote
                     if (!DataSource->End()) {
                         char nextChar;
-                        if (DataSource->Get(nextChar) && nextChar == '"') {
-                            // Escaped quote, add a single quote
-                            cell += '"';
-                        } else {
-                            // End of quoted section
-                            inQuotes = false;
-                            if (nextChar != Delimiter && !DataSource->End()) {
-                                // The next character is not the delimiter, add it to the cell
+                        if (DataSource->Get(nextChar)) {
+                            if (nextChar == '"') {
+                                // Escaped quote, add a single quote
+                                cell += '"';
+                            } else if (nextChar == Delimiter) {
+                                // End of quoted section, add cell to row
+                                row.push_back(cell);
+                                cell.clear();
+                                inQuotes = false;
+                            } else {
+                                // Any other character, add both quote and char
+                                cell += '"';
                                 cell += nextChar;
                             }
                         }
@@ -44,6 +48,10 @@ struct CDSVReader::SImplementation {
                 // Add the cell to the row when hitting a delimiter outside quotes
                 row.push_back(cell);
                 cell.clear();
+            } else if (ch == '\n' && !inQuotes) {
+                // End of the line, finalize row
+                row.push_back(cell);
+                return true;
             } else {
                 // Regular character, just add to the cell
                 cell += ch;
@@ -66,8 +74,4 @@ CDSVReader::~CDSVReader() = default;
 
 bool CDSVReader::End() const {
     return DImplementation->DataSource->End();
-}
-
-bool CDSVReader::ReadRow(std::vector<std::string> &row) {
-    return DImplementation->ReadRow(row);
 }
