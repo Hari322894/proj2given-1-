@@ -2,11 +2,13 @@
 #include <expat.h>
 #include <queue>
 #include <memory>
+#include <vector>
 
 struct CXMLReader::SImplementation {
     std::shared_ptr<CDataSource> DataSource;
     XML_Parser Parser;
     std::queue<SXMLEntity> EntityQueue;
+    bool EndOfData;
 
     static void StartElementHandler(void *userData, const char *name, const char **atts) {
         auto *impl = static_cast<SImplementation *>(userData);
@@ -48,7 +50,7 @@ struct CXMLReader::SImplementation {
         }
     }
 
-    SImplementation(std::shared_ptr<CDataSource> src) : DataSource(std::move(src)) {
+    SImplementation(std::shared_ptr<CDataSource> src) : DataSource(std::move(src)), EndOfData(false) {
         Parser = XML_ParserCreate(nullptr);
         XML_SetUserData(Parser, this);
         XML_SetElementHandler(Parser, StartElementHandler, EndElementHandler);
@@ -60,16 +62,18 @@ struct CXMLReader::SImplementation {
     }
 
     bool ReadEntity(SXMLEntity &entity, bool skipcdata) {
-        while (EntityQueue.empty()) {
+        while (EntityQueue.empty() && !EndOfData) {
             std::vector<char> buffer(4096); // Use vector instead of char array
             size_t length = DataSource->Read(buffer, buffer.size());
 
             if (length == 0) {
                 // No more data to read
+                EndOfData = true;
+                XML_Parse(Parser, nullptr, 0, 1); // Signal end of parsing
                 break;
             }
 
-            if (XML_Parse(Parser, buffer.data(), length, length == 0) == XML_STATUS_ERROR) {
+            if (XML_Parse(Parser, buffer.data(), length, 0) == XML_STATUS_ERROR) {
                 // Parsing error
                 return false;
             }
@@ -97,7 +101,7 @@ CXMLReader::CXMLReader(std::shared_ptr<CDataSource> src)
 CXMLReader::~CXMLReader() = default;
 
 bool CXMLReader::End() const {
-    return DImplementation->DataSource->End() && DImplementation->EntityQueue.empty();
+    return DImplementation->EndOfData && DImplementation->EntityQueue.empty();
 }
 
 bool CXMLReader::ReadEntity(SXMLEntity &entity, bool skipcdata) {
