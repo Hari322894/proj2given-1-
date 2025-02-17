@@ -48,6 +48,20 @@ struct CXMLReader::SImplementation {
         return result;
     }
 
+    // Read tag name, stopping at whitespace or >, but not including the stop character
+    std::string ReadTagName() {
+        std::string result;
+        char ch;
+        while (GetChar(ch)) {
+            if (std::isspace(ch) || ch == '>' || ch == '/') {
+                UngetChar(ch);
+                break;
+            }
+            result += ch;
+        }
+        return result;
+    }
+
     void ParseAttributes(SXMLEntity& entity) {
         char ch;
         while (GetChar(ch)) {
@@ -61,10 +75,14 @@ struct CXMLReader::SImplementation {
 
             // Read attribute name
             UngetChar(ch);
-            std::string attrName = ReadUntil('=');
+            std::string attrName = ReadTagName();
             
             // Get the = sign
+            SkipWhitespace();
             GetChar(ch); // =
+            
+            // Skip whitespace before value
+            SkipWhitespace();
             
             // Get opening quote
             GetChar(ch); // " or '
@@ -94,8 +112,13 @@ struct CXMLReader::SImplementation {
             // Character data
             std::string charData;
             charData += ch;
-            charData += ReadUntil('<');
-            if (!skipcdata) {
+            while (GetChar(ch) && ch != '<') {
+                charData += ch;
+            }
+            if (ch == '<') {
+                UngetChar(ch);
+            }
+            if (!skipcdata || !charData.empty()) {
                 entity.DType = SXMLEntity::EType::CharData;
                 entity.DNameData = charData;
                 return true;
@@ -107,37 +130,35 @@ struct CXMLReader::SImplementation {
         if (ch == '/') {
             // End element
             entity.DType = SXMLEntity::EType::EndElement;
-            entity.DNameData = ReadUntil('>');
-            GetChar(ch); // consume '>'
+            entity.DNameData = ReadTagName();
+            // Skip to and consume '>'
+            while (GetChar(ch) && ch != '>') {}
             return true;
+        }
+
+        // Skip XML declaration or other special tags
+        if (ch == '?') {
+            while (GetChar(ch) && !(ch == '?' && GetChar(ch) && ch == '>')) {}
+            return ReadEntity(entity, skipcdata);
         }
 
         // Start or complete element
         UngetChar(ch);
-        entity.DNameData = ReadUntil(' ', true);
-        if (entity.DNameData.back() == '>') {
-            // Simple start element with no attributes
-            entity.DNameData.pop_back();
-            entity.DType = SXMLEntity::EType::StartElement;
-            return true;
-        }
+        entity.DNameData = ReadTagName();
         
-        if (entity.DNameData.back() == '/') {
-            // Self-closing element with no attributes
-            entity.DNameData.pop_back();
-            entity.DType = SXMLEntity::EType::CompleteElement;
-            GetChar(ch); // consume '>'
-            return true;
+        // Skip whitespace and parse attributes if any
+        SkipWhitespace();
+        GetChar(ch);
+        if (ch != '>' && ch != '/') {
+            UngetChar(ch);
+            ParseAttributes(entity);
+            GetChar(ch);
         }
 
-        ParseAttributes(entity);
-        
-        GetChar(ch);
         if (ch == '/') {
             entity.DType = SXMLEntity::EType::CompleteElement;
             GetChar(ch); // consume '>'
-        } else {
-            UngetChar(ch);
+        } else if (ch == '>') {
             entity.DType = SXMLEntity::EType::StartElement;
         }
 
