@@ -18,7 +18,7 @@ OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
 # Test object files - separate into GTest and standalone tests
 GTEST_FILES = $(TEST_DIR)/StringUtilsTest.cpp $(TEST_DIR)/StringDataSourceTest.cpp $(TEST_DIR)/StringDataSinkTest.cpp
-STANDALONE_FILES = $(TEST_DIR)/XMLtest.cpp $(TEST_DIR)/DSVtest.cpp
+STANDALONE_FILES = $(TEST_DIR)/xmltest.cpp $(TEST_DIR)/dsvtest.cpp
 
 GTEST_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(GTEST_FILES))
 STANDALONE_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(STANDALONE_FILES))
@@ -37,12 +37,12 @@ $(GTEST_TARGET): $(OBJ_FILES) $(GTEST_OBJ_FILES)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 # Rule to build the XML test binary
-$(XML_TARGET): $(OBJ_DIR)/XMLtest.o $(OBJ_FILES)
+$(XML_TARGET): $(OBJ_DIR)/xmltest.o $(OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 # Rule to build the DSV test binary
-$(DSV_TARGET): $(OBJ_DIR)/DSVtest.o $(OBJ_FILES)
+$(DSV_TARGET): $(OBJ_DIR)/dsvtest.o $(OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
