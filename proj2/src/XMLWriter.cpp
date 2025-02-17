@@ -11,26 +11,14 @@ struct CXMLWriter::SImplementation {
     std::string EscapeString(const std::string &str) {
         std::string result;
         result.reserve(str.size() * 2); // Reserve extra space for potential escapes
-
         for (char c : str) {
             switch (c) {
-                case '&':
-                    result += "&amp;";
-                    break;
-                case '"':
-                    result += "&quot;";
-                    break;
-                case '\'':
-                    result += "&apos;";
-                    break;
-                case '<':
-                    result += "&lt;";
-                    break;
-                case '>':
-                    result += "&gt;";
-                    break;
-                default:
-                    result += c; // Add the character as is
+                case '&': result += "&amp;"; break;
+                case '"': result += "&quot;"; break;
+                case '\'': result += "&apos;"; break;
+                case '<': result += "&lt;"; break;
+                case '>': result += "&gt;"; break;
+                default: result += c; break;
             }
         }
         return result;
@@ -55,11 +43,9 @@ struct CXMLWriter::SImplementation {
                 IndentationLevel++;
                 break;
 
-                case SXMLEntity::EType::EndElement:
+            case SXMLEntity::EType::EndElement:
                 IndentationLevel--;
-                if (IndentationLevel > 0) {
-                    AddIndentation(output);
-                }
+                AddIndentation(output);
                 output += "</" + entity.DNameData + ">";
                 break;
 
