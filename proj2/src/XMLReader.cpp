@@ -68,7 +68,7 @@ struct CXMLReader::SImplementation {
             return false;
         }
 
-        if (XML_Parse(Parser, buffer, length, length == 0) == XML_STATUS_ERROR) {
+        if (XML_Parse(Parser, buffer.data(), length, length == 0) == XML_STATUS_ERROR) {
             return false;
         }
 
