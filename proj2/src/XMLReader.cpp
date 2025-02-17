@@ -106,7 +106,6 @@ struct CXMLReader::SImplementation {
                 attrValue += ch;
             }
             
-            // Decode entities in attribute value
             attrValue = DecodeEntities(attrValue);
             entity.DAttributes.push_back(std::make_pair(attrName, attrValue));
         }
@@ -122,7 +121,7 @@ struct CXMLReader::SImplementation {
         if (!GetChar(ch)) {
             return false;
         }
-    
+
         if (ch != '<') {
             // Character data
             std::string charData;
@@ -135,21 +134,44 @@ struct CXMLReader::SImplementation {
                 charData += ch;
             }
             
-            if (!skipcdata || !charData.empty()) {
-                entity.DType = SXMLEntity::EType::CharData;
-                entity.DNameData = DecodeEntities(charData);
-                return true;
+            // If skipcdata is true, skip this character data and read next entity
+            if (skipcdata) {
+                return ReadEntity(entity, skipcdata);
             }
-            return ReadEntity(entity, skipcdata);
+            
+            entity.DType = SXMLEntity::EType::CharData;
+            entity.DNameData = DecodeEntities(charData);
+            return true;
         }
-    
+
         // Handle special tags
         GetChar(ch);
         if (ch == '?') {
+            // Skip processing instructions
             while (GetChar(ch) && !(ch == '?' && GetChar(ch) && ch == '>')) {}
             return ReadEntity(entity, skipcdata);
         }
-    
+
+        if (ch == '!') {
+            // Check for CDATA section or comments
+            std::string specialTag;
+            for (int i = 0; i < 2; ++i) {
+                if (GetChar(ch)) {
+                    specialTag += ch;
+                }
+            }
+            
+            if (specialTag == "--") {
+                // Skip comments
+                while (GetChar(ch) && !(ch == '-' && GetChar(ch) && ch == '-' && GetChar(ch) && ch == '>')) {}
+                return ReadEntity(entity, skipcdata);
+            }
+            
+            // Skip other special tags
+            while (GetChar(ch) && ch != '>') {}
+            return ReadEntity(entity, skipcdata);
+        }
+
         if (ch == '/') {
             // End element
             entity.DType = SXMLEntity::EType::EndElement;
@@ -157,7 +179,7 @@ struct CXMLReader::SImplementation {
             while (GetChar(ch) && ch != '>') {}
             return true;
         }
-    
+
         // Start or complete element
         UngetChar(ch);
         entity.DNameData = ReadTagName();
@@ -170,7 +192,7 @@ struct CXMLReader::SImplementation {
         } else if (ch == '>') {
             entity.DType = SXMLEntity::EType::StartElement;
         }
-    
+
         return true;
     }
 };
