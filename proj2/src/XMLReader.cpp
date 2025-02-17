@@ -122,16 +122,17 @@ struct CXMLReader::SImplementation {
         if (!GetChar(ch)) {
             return false;
         }
-
+    
         if (ch != '<') {
             // Character data
             std::string charData;
             charData += ch;
-            while (GetChar(ch) && ch != '<') {
+            while (GetChar(ch)) {
+                if (ch == '<') {
+                    UngetChar(ch);
+                    break;
+                }
                 charData += ch;
-            }
-            if (ch == '<') {
-                UngetChar(ch);
             }
             
             while (!charData.empty() && std::isspace(charData.back())) {
@@ -145,14 +146,14 @@ struct CXMLReader::SImplementation {
             }
             return ReadEntity(entity, skipcdata);
         }
-
+    
         // Handle special tags
         GetChar(ch);
         if (ch == '?') {
             while (GetChar(ch) && !(ch == '?' && GetChar(ch) && ch == '>')) {}
             return ReadEntity(entity, skipcdata);
         }
-
+    
         if (ch == '/') {
             // End element
             entity.DType = SXMLEntity::EType::EndElement;
@@ -161,7 +162,7 @@ struct CXMLReader::SImplementation {
             while (GetChar(ch) && ch != '>') {}
             return true;
         }
-
+    
         // Start or complete element
         UngetChar(ch);
         entity.DNameData = ReadTagName();
@@ -176,9 +177,10 @@ struct CXMLReader::SImplementation {
         } else if (ch == '>') {
             entity.DType = SXMLEntity::EType::StartElement;
         }
-
+    
         return true;
     }
+    
 };
 
 CXMLReader::CXMLReader(std::shared_ptr<CDataSource> src)
