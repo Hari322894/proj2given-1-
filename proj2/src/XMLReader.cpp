@@ -193,3 +193,5 @@ bool CXMLReader::End() const {
 bool CXMLReader::ReadEntity(SXMLEntity& entity, bool skipcdata) {
     return DImplementation->ReadEntity(entity, skipcdata);
 }
+
+
