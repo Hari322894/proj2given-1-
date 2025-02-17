@@ -1,88 +1,161 @@
 #include "XMLWriter.h"
-#include <sstream>
+#include <stack>
+#include <string>
 
 struct CXMLWriter::SImplementation {
-    std::shared_ptr<CDataSink> DataSink;
-
-    SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
-
-    // Helper function to escape special XML characters
-    std::string EscapeString(const std::string &str) {
-        std::string result;
-        result.reserve(str.size() * 2); 
-        // Reserve extra space for potential escapes
-
-        for (char c : str) {
-            switch (c) {
-                case '&':
-                    result += "&amp;";
-                    break;
-                case '"':
-                    result += "&quot;";
-                    break;
-                case '\'':
-                    result += "&apos;";
-                    break;
-                case '<':
-                    result += "&lt;";
-                    break;
-                case '>':
-                    result += "&gt;";
-                    break;
-                default:
-                    result += c; 
-                // Add the character as is
+    std::shared_ptr<CDataSink> DDataSink;
+    std::stack<std::string> DElementStack;
+    
+    SImplementation(std::shared_ptr<CDataSink> sink)
+        : DDataSink(sink) {
+    }
+    
+    bool WriteString(const std::string &str) {
+        for(char ch : str) {
+            if(!DDataSink->Put(ch)) {
+                return false;
             }
         }
-        return result;
+        return true;
     }
-
+    
+    bool WriteEscaped(const std::string &str) {
+        for(char ch : str) {
+            switch(ch) {
+                case '<':
+                    if(!WriteString("&lt;")) return false;
+                    break;
+                case '>':
+                    if(!WriteString("&gt;")) return false;
+                    break;
+                case '&':
+                    if(!WriteString("&amp;")) return false;
+                    break;
+                case '\'':
+                    if(!WriteString("&apos;")) return false;
+                    break;
+                case '"':
+                    if(!WriteString("&quot;")) return false;
+                    break;
+                default:
+                    if(!DDataSink->Put(ch)) return false;
+            }
+        }
+        return true;
+    }
+    
+    bool Flush() {
+        while(!DElementStack.empty()) {
+            if(!WriteString("</")) {
+                return false;
+            }
+            if(!WriteString(DElementStack.top())) {
+                return false;
+            }
+            if(!WriteString(">")) {
+                return false;
+            }
+            DElementStack.pop();
+        }
+        return true;
+    }
+    
     bool WriteEntity(const SXMLEntity &entity) {
-        std::string output;
-        // Handle different entity types
-        switch (entity.DType) {
+        switch(entity.DType) {
             case SXMLEntity::EType::StartElement:
-                output = "<" + entity.DNameData;
-                // Add attributes
-                for (const auto &attr : entity.DAttributes) {
-                    output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                if(!WriteString("<")) {
+                    return false;
                 }
-                output += ">";
+                if(!WriteString(entity.DNameData)) {
+                    return false;
+                }
+                for(const auto &attr : entity.DAttributes) {
+                    if(!WriteString(" ")) {
+                        return false;
+                    }
+                    if(!WriteString(attr.first)) {
+                        return false;
+                    }
+                    if(!WriteString("=\"")) {
+                        return false;
+                    }
+                    if(!WriteEscaped(attr.second)) {
+                        return false;
+                    }
+                    if(!WriteString("\"")) {
+                        return false;
+                    }
+                }
+                if(!WriteString(">")) {
+                    return false;
+                }
+                DElementStack.push(entity.DNameData);
                 break;
+                
             case SXMLEntity::EType::EndElement:
-                output = "</" + entity.DNameData + ">";
-                break;
-            case SXMLEntity::EType::CharData:
-                output = EscapeString(entity.DNameData);
-                break;
-            case SXMLEntity::EType::CompleteElement:
-                output = "<" + entity.DNameData;
-                // Add attributes
-                for (const auto &attr : entity.DAttributes) {
-                    output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                if(!WriteString("</")) {
+                    return false;
                 }
-                // Self-closing tag
-                output += "/>";
+                if(!WriteString(entity.DNameData)) {
+                    return false;
+                }
+                if(!WriteString(">")) {
+                    return false;
+                }
+                if(!DElementStack.empty()) {
+                    DElementStack.pop();
+                }
+                break;
+                
+            case SXMLEntity::EType::CharData:
+                if(!WriteEscaped(entity.DNameData)) {
+                    return false;
+                }
+                break;
+                
+            case SXMLEntity::EType::CompleteElement:
+                if(!WriteString("<")) {
+                    return false;
+                }
+                if(!WriteString(entity.DNameData)) {
+                    return false;
+                }
+                for(const auto &attr : entity.DAttributes) {
+                    if(!WriteString(" ")) {
+                        return false;
+                    }
+                    if(!WriteString(attr.first)) {
+                        return false;
+                    }
+                    if(!WriteString("=\"")) {
+                        return false;
+                    }
+                    if(!WriteEscaped(attr.second)) {
+                        return false;
+                    }
+                    if(!WriteString("\"")) {
+                        return false;
+                    }
+                }
+                if(!WriteString("/>")) {
+                    return false;
+                }
                 break;
         }
-        // Write the output to the data sink
-        return DataSink->Write(std::vector<char>(output.begin(), output.end()));
-    }
-
-    bool Flush() {
-        return true; // No Flush() method in CDataSink
+        return true;
     }
 };
 
 CXMLWriter::CXMLWriter(std::shared_ptr<CDataSink> sink)
-    : DImplementation(std::make_unique<SImplementation>(std::move(sink))) {}
+    : DImplementation(std::make_unique<SImplementation>(sink)) {
+}
 
 CXMLWriter::~CXMLWriter() = default;
 
-bool CXMLWriter::WriteEntity(const SXMLEntity &entity) {
-    return DImplementation->WriteEntity(entity);
-}
-
 bool CXMLWriter::Flush() {
     return DImplementation->Flush();
+}
+
+bool CXMLWriter::WriteEntity(const SXMLEntity &entity) {
+    return DImplementation->WriteEntity(entity);
 }
