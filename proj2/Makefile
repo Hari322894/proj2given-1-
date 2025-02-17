@@ -44,3 +44,12 @@ clean:
 
 # Phony targets
 .PHONY: all clean
+
+# Add this rule to the Makefile
+setup:
+    @mkdir -p driver
+    @touch driver/example.txt  # Example: Create a test file in the driver directory
+
+# Update the test target to depend on setup
+test: setup $(TARGET)
+    ./$(TARGET)
