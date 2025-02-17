@@ -1,11 +1,11 @@
 #include "XMLWriter.h"
-
 #include <sstream>
 #include <unordered_map>
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
-
+    bool HasRootElement = false;
+    
     // Special character map for XML escaping
     const std::unordered_map<char, std::string> EscapeMap = {
         {'&', "&amp;"},
@@ -14,14 +14,13 @@ struct CXMLWriter::SImplementation {
         {'<', "&lt;"},
         {'>', "&gt;"}
     };
-
+    
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
-
-    // Helper function to escape special XML characters
+    
     std::string EscapeString(const std::string &str) {
         std::string result;
-        result.reserve(str.size() * 2); // Reserve extra space for potential escapes
-
+        result.reserve(str.size() * 2);
+        
         for (char c : str) {
             auto it = EscapeMap.find(c);
             if (it != EscapeMap.end()) {
@@ -30,55 +29,69 @@ struct CXMLWriter::SImplementation {
                 result += c;
             }
         }
-
+        
         return result;
     }
-
+    
     bool WriteEntity(const SXMLEntity &entity) {
-        static int indentLevel = 0;  // Track indentation level
         std::string output;
-
-        // Handle different entity types
+        
         switch (entity.DType) {
-            case SXMLEntity::EType::StartElement:
-                output += std::string(indentLevel, '\t') + "<" + entity.DNameData;
-
-                // Add attributes
+            case SXMLEntity::EType::StartElement: {
+                if (!HasRootElement) {
+                    HasRootElement = true;
+                } else {
+                    output = "\n\t";
+                }
+                
+                output += "<" + entity.DNameData;
+                
+                // Add attributes in sorted order
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                output += ">\n";
-                ++indentLevel;  // Increase indentation level for nested elements
+                output += ">";
                 break;
-
+            }
+            
             case SXMLEntity::EType::EndElement:
-                --indentLevel;  // Decrease indentation level for closing tag
-                output += std::string(indentLevel, '\t') + "</" + entity.DNameData + ">\n";
+                // We'll skip writing the end element for the root
+                if (entity.DNameData != "osm") {
+                    output = "</" + entity.DNameData + ">";
+                }
                 break;
-
+            
             case SXMLEntity::EType::CharData:
-                output += std::string(indentLevel, '\t') + EscapeString(entity.DNameData) + "\n";
+                output = EscapeString(entity.DNameData);
                 break;
-
-            case SXMLEntity::EType::CompleteElement:
-                output += std::string(indentLevel, '\t') + "<" + entity.DNameData;
-
+            
+            case SXMLEntity::EType::CompleteElement: {
+                if (!HasRootElement) {
+                    HasRootElement = true;
+                } else {
+                    output = "\n\t";
+                }
+                
+                output += "<" + entity.DNameData;
+                
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-
-                // Self-closing tag
-                output += "/>\n";
+                
+                output += "/>";
                 break;
+            }
         }
-
-        // Write the output to the data sink
-        return DataSink->Write(std::vector<char>(output.begin(), output.end()));
+        
+        if (!output.empty()) {
+            return DataSink->Write(std::vector<char>(output.begin(), output.end()));
+        }
+        return true;
     }
-
+    
     bool Flush() {
-        return true; // No Flush() method in CDataSink
+        return true;
     }
 };
 
