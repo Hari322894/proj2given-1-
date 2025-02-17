@@ -23,8 +23,6 @@ struct CDSVReader::SImplementation {
         bool inQuotes = false;
         //check to see if any data was read
         bool dataRead = false;
-        // Track if we've seen any non-whitespace characters in the current cell
-        bool hasContent = false;
         // Track if we started with a quote
         bool startedWithQuote = false;
 
@@ -37,55 +35,45 @@ struct CDSVReader::SImplementation {
             //data has been read
             dataRead = true;
 
-            // Handle start of cell
-            if (cell.empty() && !hasContent && ch == '"') {
-                inQuotes = true;
-                startedWithQuote = true;
-                hasContent = true;
-                continue;
-            }
-
             // Handle quotes
             if (ch == '"') {
-                if (inQuotes) {
-                    // Check for escaped quotes
-                    if (!DataSource->End()) {
-                        char nextCh;
-                        if (DataSource->Get(nextCh)) {
-                            if (nextCh == '"') {
-                                cell += '"';
-                                continue;
-                            } else {
-                                // Put back the character we just read
-                                DataSource->Unget();
-                            }
-                        }
-                    }
-                    inQuotes = false;
-                    continue;
-                } else if (cell.empty() || !hasContent) {
+                if (cell.empty() && !inQuotes) {
+                    // Start of a quoted field
                     inQuotes = true;
+                    startedWithQuote = true;
                     continue;
+                } else if (inQuotes) {
+                    // Check for escaped quotes
+                    char nextCh;
+                    if (DataSource->Peek(nextCh) && nextCh == '"') {
+                        // Consume the second quote
+                        DataSource->Get(nextCh);
+                        cell += '"';
+                        continue;
+                    } else {
+                        // Not an escaped quote, end of quoted section
+                        inQuotes = false;
+                        continue;
+                    }
                 }
             }
 
-            // Handle delimiters and newlines
+            // Handle delimiters and newlines when not in quotes
             if (!inQuotes && (ch == Delimiter || ch == '\n' || ch == '\r')) {
-                // If we started with a quote and ended with a quote, keep the quotes in the output
+                // If we started with a quote, wrap the content in quotes
                 if (startedWithQuote) {
                     cell = '"' + cell + '"';
                 }
                 row.push_back(cell);
                 cell.clear();
-                hasContent = false;
                 startedWithQuote = false;
 
                 if (ch == '\n' || ch == '\r') {
                     // Handle \r\n newline sequence
-                    if (ch == '\r' && !DataSource->End()) {
+                    if (ch == '\r') {
                         char nextCh;
-                        if (DataSource->Get(nextCh) && nextCh != '\n') {
-                            DataSource->Unget();
+                        if (DataSource->Peek(nextCh) && nextCh == '\n') {
+                            DataSource->Get(nextCh); // consume the \n
                         }
                     }
                     return true;
@@ -95,9 +83,6 @@ struct CDSVReader::SImplementation {
 
             // Add character to cell
             cell += ch;
-            if (!std::isspace(ch)) {
-                hasContent = true;
-            }
         }
 
         // Handle last cell if there is one
