@@ -16,7 +16,7 @@ struct CDSVReader::SImplementation {
         bool hasData = false;
 
         while (!DataSource->End()) {
-            if (!DataSource->Get(ch)) return false;
+            if (!DataSource->Get(ch)) break;
             hasData = true;
 
             if (ch == '"') {
@@ -24,31 +24,29 @@ struct CDSVReader::SImplementation {
                     char nextChar;
                     if (DataSource->Get(nextChar)) {
                         if (nextChar == '"') {
-                            // Escaped quote, add a single quote to cell
+                            // Escaped quote, add it to the cell
                             cell += '"';
                         } else {
                             // End of quoted section, keep the next character for processing
                             inQuotes = false;
-                            cell += ch;  // Add the current quote
-                            cell += nextChar;
+                            DataSource->PutBack(nextChar);
                         }
                     }
                 } else {
                     // Toggle quote mode if not handling escaped quotes
                     inQuotes = !inQuotes;
-                    cell += ch;
                 }
             } else if (ch == Delimiter && !inQuotes) {
-                // Add the cell to the row when hitting a delimiter outside quotes
+                // End of cell, add it to the row
                 row.push_back(cell);
                 cell.clear();
             } else {
-                // Regular character, just add to the cell
+                // Regular character, add to the cell
                 cell += ch;
             }
         }
 
-        // Add the last cell if there was any data
+        // Add the last cell if any data was read
         if (!cell.empty() || hasData) {
             row.push_back(cell);
         }
