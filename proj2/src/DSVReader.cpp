@@ -16,37 +16,41 @@ struct CDSVReader::SImplementation {
         bool hasData = false;
 
         while (!DataSource->End()) {
-            if (!DataSource->Get(ch)) break;
+            if (!DataSource->Get(ch)) return false;
             hasData = true;
 
             if (ch == '"') {
-                if (inQuotes && !DataSource->End()) {
-                    char nextChar;
-                    if (DataSource->Get(nextChar)) {
-                        if (nextChar == '"') {
-                            // Escaped quote, add it to the cell
+                if (inQuotes) {
+                    // Check if the next character is another quote
+                    if (!DataSource->End()) {
+                        char nextChar;
+                        if (DataSource->Get(nextChar) && nextChar == '"') {
+                            // Escaped quote, add a single quote
                             cell += '"';
                         } else {
-                            // End of quoted section, keep the next character for processing
+                            // End of quoted section
                             inQuotes = false;
-                            DataSource->PutBack(nextChar);
+                            if (nextChar != Delimiter && !DataSource->End()) {
+                                // The next character is not the delimiter, add it to the cell
+                                cell += nextChar;
+                            }
                         }
                     }
                 } else {
-                    // Toggle quote mode if not handling escaped quotes
-                    inQuotes = !inQuotes;
+                    // Starting a quoted section
+                    inQuotes = true;
                 }
             } else if (ch == Delimiter && !inQuotes) {
-                // End of cell, add it to the row
+                // Add the cell to the row when hitting a delimiter outside quotes
                 row.push_back(cell);
                 cell.clear();
             } else {
-                // Regular character, add to the cell
+                // Regular character, just add to the cell
                 cell += ch;
             }
         }
 
-        // Add the last cell if any data was read
+        // Add the last cell if there was any data
         if (!cell.empty() || hasData) {
             row.push_back(cell);
         }
