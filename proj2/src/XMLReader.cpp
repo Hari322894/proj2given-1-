@@ -3,6 +3,7 @@
 #include <queue>
 #include <cctype>
 #include <unordered_map>
+#include <iostream> 
 
 struct CXMLReader::SImplementation {
     std::shared_ptr<CDataSource> DataSource;
