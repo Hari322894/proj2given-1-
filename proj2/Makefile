@@ -1,46 +1,39 @@
-# Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Iinclude
-LDFLAGS = -lexpat -lgtest -lgtest_main -pthread
+CXXFLAGS = -std=c++17 -Wall -Wextra -Werror -g -Iinclude
 
-# Directories
-SRC_DIR = src
-TEST_DIR = testsrc
-OBJ_DIR = obj
-BIN_DIR = bin
+SRC = src/DSVReader.cpp src/DSVWriter.cpp src/StringDataSink.cpp \
+      src/StringDataSource.cpp src/StringUtils.cpp src/XMLReader.cpp src/XMLWriter.cpp
 
-# Source files
-SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp)
-TEST_FILES = $(wildcard $(TEST_DIR)/*.cpp)
+TEST_SRC = testsrc/DSVTest.cpp testsrc/StringDataSinkTest.cpp \
+           testsrc/StringDataSourceTest.cpp testsrc/StringUtilsTest.cpp testsrc/XMLTest.cpp
 
-# Object files
-OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC_FILES))
-TEST_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(TEST_FILES))
+OBJS = $(SRC:.cpp=.o)
+TEST_OBJS = $(TEST_SRC:.cpp=.o)
+HEADERS = include/DataSink.h include/DataSource.h include/DSVReader.h include/DSVWriter.h \
+          include/StringDataSink.h include/StringDataSource.h include/StringUtils.h \
+          include/XMLEntity.h include/XMLReader.h include/XMLWriter.h
 
-# Output binary
-TARGET = $(BIN_DIR)/testproj2
+TARGET = parser_app
+TEST_TARGET = test_runner
 
-# Default target
-all: $(TARGET)
+all: $(TARGET) $(TEST_TARGET)
 
-# Rule to build the final binary
-$(TARGET): $(OBJ_FILES) $(TEST_OBJ_FILES)
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Rule to compile source files into object files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	@mkdir -p $(OBJ_DIR)
+$(TEST_TARGET): $(TEST_OBJS) $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+%.o: %.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Rule to compile test files into object files
-$(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
-	@mkdir -p $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-# Clean up build artifacts
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
+	rm -f $(OBJS) $(TEST_OBJS) $(TARGET) $(TEST_TARGET)
 
-# Phony targets
-.PHONY: all clean
+run: $(TARGET)
+	./$(TARGET)
+
+test: $(TEST_TARGET)
+	./$(TEST_TARGET)
+
+.PHONY: all clean run test
