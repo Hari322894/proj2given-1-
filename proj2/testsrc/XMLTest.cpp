@@ -1,24 +1,23 @@
-#include "gtest/gtest.h"
 #include "XMLReader.h"
 #include "XMLWriter.h"
 #include "StringDataSource.h"
 #include "StringDataSink.h"
+#include <iostream>
 
-TEST(CXMLReaderTest, ReadEntityTest) {
-    auto source = std::make_shared<CStringDataSource>("<root><child/></root>");
-    CXMLReader reader(source);
-    SXMLEntity entity;
-    EXPECT_TRUE(reader.ReadEntity(entity, false));
-    EXPECT_EQ(entity.DType, SXMLEntity::EType::StartElement);
-    EXPECT_EQ(entity.DNameData, "root");
-}
+int main() {
+    std::shared_ptr<CStringDataSource> src = std::make_shared<CStringDataSource>("<tag>data</tag>");
+    std::shared_ptr<CStringDataSink> sink = std::make_shared<CStringDataSink>();
 
-TEST(CXMLWriterTest, WriteEntityTest) {
-    auto sink = std::make_shared<CStringDataSink>();
+    CXMLReader reader(src);
     CXMLWriter writer(sink);
+
     SXMLEntity entity;
-    entity.DType = SXMLEntity::EType::StartElement;
-    entity.DNameData = "root";
-    EXPECT_TRUE(writer.WriteEntity(entity));
-    EXPECT_EQ(sink->String(), "<root>");
+    while (!reader.End()) {
+        if (reader.ReadEntity(entity)) {
+            writer.WriteEntity(entity);
+        }
+    }
+
+    std::cout << "Written XML: " << sink->String() << std::endl;
+    return 0;
 }

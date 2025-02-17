@@ -1,48 +1,33 @@
 #include "DSVReader.h"
 #include <sstream>
-#include <algorithm>
 
 struct CDSVReader::SImplementation {
-    std::shared_ptr<CDataSource> DDataSource;
-    char DDelimiter;
-    bool DEndReached;
+    std::shared_ptr<CDataSource> DataSource;
+    char Delimiter;
 
     SImplementation(std::shared_ptr<CDataSource> src, char delimiter)
-        : DDataSource(src), DDelimiter(delimiter), DEndReached(false) {}
+        : DataSource(std::move(src)), Delimiter(delimiter) {}
 
     bool ReadRow(std::vector<std::string> &row) {
         row.clear();
         std::string cell;
         char ch;
         bool inQuotes = false;
-        bool escapeNext = false;
 
-        while (DDataSource->Get(ch)) {
-            if (escapeNext) {
-                cell += ch;
-                escapeNext = false;
-            } else if (ch == '"') {
-                inQuotes = !inQuotes;
-            } else if (ch == '\\') {
-                escapeNext = true;
-            } else if (!inQuotes && ch == DDelimiter) {
+        while (!DataSource->End()) {
+            if (!DataSource->Get(ch)) return false;
+
+            if (ch == Delimiter && !inQuotes) {
                 row.push_back(cell);
                 cell.clear();
-            } else if (!inQuotes && (ch == '\n' || ch == '\r')) {
-                if (!cell.empty() || !row.empty()) {
-                    row.push_back(cell);
-                }
-                return true;
+            } else if (ch == '"') {
+                inQuotes = !inQuotes;
             } else {
                 cell += ch;
             }
         }
-
-        if (!cell.empty() || !row.empty()) {
-            row.push_back(cell);
-        }
-        DEndReached = true;
-        return !row.empty();
+        if (!cell.empty() || !row.empty()) row.push_back(cell);
+        return true;
     }
 };
 
@@ -52,7 +37,7 @@ CDSVReader::CDSVReader(std::shared_ptr<CDataSource> src, char delimiter)
 CDSVReader::~CDSVReader() = default;
 
 bool CDSVReader::End() const {
-    return DImplementation->DEndReached;
+    return DImplementation->DataSource->End();
 }
 
 bool CDSVReader::ReadRow(std::vector<std::string> &row) {

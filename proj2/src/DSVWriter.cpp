@@ -1,36 +1,32 @@
 #include "DSVWriter.h"
-#include <sstream>
 
 struct CDSVWriter::SImplementation {
-    std::shared_ptr<CDataSink> DDataSink;
-    char DDelimiter;
-    bool DQuoteAll;
+    std::shared_ptr<CDataSink> DataSink;
+    char Delimiter;
+    bool QuoteAll;
 
     SImplementation(std::shared_ptr<CDataSink> sink, char delimiter, bool quoteall)
-        : DDataSink(sink), DDelimiter(delimiter), DQuoteAll(quoteall) {}
+        : DataSink(std::move(sink)), Delimiter(delimiter), QuoteAll(quoteall) {}
 
     bool WriteRow(const std::vector<std::string> &row) {
         for (size_t i = 0; i < row.size(); ++i) {
-            if (i > 0) {
-                DDataSink->Write(std::vector<char>{DDelimiter});
-            }
             std::string cell = row[i];
-            bool needsQuotes = DQuoteAll || cell.find(DDelimiter) != std::string::npos || cell.find('"') != std::string::npos || cell.find('\n') != std::string::npos;
+            bool needsQuotes = QuoteAll || (cell.find(Delimiter) != std::string::npos);
+
             if (needsQuotes) {
-                DDataSink->Write(std::vector<char>{'"'});
+                DataSink->Put('"');
                 for (char ch : cell) {
-                    if (ch == '"') {
-                        DDataSink->Write(std::vector<char>{'"', '"'});
-                    } else {
-                        DDataSink->Write(std::vector<char>{ch});
-                    }
+                    if (ch == '"') DataSink->Put('"');
+                    DataSink->Put(ch);
                 }
-                DDataSink->Write(std::vector<char>{'"'});
+                DataSink->Put('"');
             } else {
-                DDataSink->Write(std::vector<char>(cell.begin(), cell.end()));
+                for (char ch : cell) DataSink->Put(ch);
             }
+
+            if (i < row.size() - 1) DataSink->Put(Delimiter);
         }
-        DDataSink->Write(std::vector<char>{'\n'});
+        DataSink->Put('\n');
         return true;
     }
 };

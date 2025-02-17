@@ -1,38 +1,16 @@
 #include "XMLWriter.h"
-#include <sstream>
 
 struct CXMLWriter::SImplementation {
-    std::shared_ptr<CDataSink> DDataSink;
+    std::shared_ptr<CDataSink> DataSink;
 
-    SImplementation(std::shared_ptr<CDataSink> sink)
-        : DDataSink(sink) {}
+    SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
 
     bool WriteEntity(const SXMLEntity &entity) {
-        std::stringstream ss;
-        switch (entity.DType) {
-            case SXMLEntity::EType::StartElement:
-                ss << "<" << entity.DNameData;
-                for (const auto &attr : entity.DAttributes) {
-                    ss << " " << attr.first << "=\"" << attr.second << "\"";
-                }
-                ss << ">";
-                break;
-            case SXMLEntity::EType::EndElement:
-                ss << "</" << entity.DNameData << ">";
-                break;
-            case SXMLEntity::EType::CompleteElement:
-                ss << "<" << entity.DNameData;
-                for (const auto &attr : entity.DAttributes) {
-                    ss << " " << attr.first << "=\"" << attr.second << "\"";
-                }
-                ss << "/>";
-                break;
-            case SXMLEntity::EType::CharData:
-                ss << entity.DNameData;
-                break;
-        }
-        std::string str = ss.str();
-        DDataSink->Write(std::vector<char>(str.begin(), str.end()));
+        DataSink->Write(std::vector<char>(entity.DNameData.begin(), entity.DNameData.end()));
+        return true;
+    }
+
+    bool Flush() {
         return true;
     }
 };
@@ -44,4 +22,8 @@ CXMLWriter::~CXMLWriter() = default;
 
 bool CXMLWriter::WriteEntity(const SXMLEntity &entity) {
     return DImplementation->WriteEntity(entity);
+}
+
+bool CXMLWriter::Flush() {
+    return DImplementation->Flush();
 }
