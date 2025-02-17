@@ -35,42 +35,53 @@ struct CXMLWriter::SImplementation {
         return result;
     }
 
+    // Flag to track if we are currently inside the root element
+    bool insideRootElement = false;
+
     bool WriteEntity(const SXMLEntity &entity) {
         std::string output;
 
         // Handle different entity types
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                output = "<" + entity.DNameData;
+                output += "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += ">";
+                if (entity.DNameData == "osm") {
+                    insideRootElement = true; // Indicate we are inside the root element
+                }
                 break;
+
             case SXMLEntity::EType::EndElement:
-                output = "</" + entity.DNameData + ">";
+                output += "</" + entity.DNameData + ">";
+                if (entity.DNameData == "osm") {
+                    insideRootElement = false; // Reset the flag when exiting the root element
+                }
                 break;
+
             case SXMLEntity::EType::CharData:
-                output = EscapeString(entity.DNameData);
+                output += EscapeString(entity.DNameData);
                 break;
+
             case SXMLEntity::EType::CompleteElement:
-                output = "<" + entity.DNameData;
+                output += "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                // Self-closing tag
-                output += "/>";
+                output += "/>"; // Self-closing tag
                 break;
         }
 
         // Write the output to the data sink
         bool success = DataSink->Write(std::vector<char>(output.begin(), output.end()));
 
-        // If this is the root element, write the closing tag
-        if (entity.DType == SXMLEntity::EType::StartElement && entity.DNameData == "osm") {
-            std::string closingTag = "\n</osm>";
+        // If we are exiting the root element, write the closing tag
+        if (!insideRootElement && entity.DType == SXMLEntity::EType::EndElement && entity.DNameData == "osm") {
+            std::string closingTag = "\n</osm>\n"; // Ensure proper formatting
             success &= DataSink->Write(std::vector<char>(closingTag.begin(), closingTag.end()));
         }
 
@@ -78,13 +89,7 @@ struct CXMLWriter::SImplementation {
     }
 
     bool Flush() {
-
-        // If CDataSink has no Flush method, just return true
-    
-        return true;
-    
-        // If you have logic to handle flushing data, implement it here.
-    
+        return true; // No Flush method in CDataSink
     }
 };
 
