@@ -49,26 +49,27 @@ struct CXMLReader::SImplementation {
 
     bool ReadEntity(SXMLEntity& entity, bool skipcdata) {
         HasEntity = false;
-        char buffer[4096];
-
+        std::vector<char> buffer(4096);  // Use a vector instead of a C-style array
+    
         while (!EndOfData && !HasEntity) {
-            size_t bytesRead = DataSource->Read(buffer, sizeof(buffer));
+            size_t bytesRead = DataSource->Read(buffer, buffer.size());
             if (bytesRead == 0) {
                 EndOfData = true;
                 XML_Parse(Parser, nullptr, 0, XML_TRUE);  // Signal end of parsing
                 break;
             }
-
-            if (!XML_Parse(Parser, buffer, bytesRead, XML_FALSE)) {
+    
+            // Pass the data from the vector to the parser
+            if (!XML_Parse(Parser, buffer.data(), bytesRead, XML_FALSE)) {
                 return false;  // Parsing error
             }
         }
-
+    
         if (HasEntity) {
             entity = CurrentEntity;
             return true;
         }
-
+    
         return false;
     }
 };
