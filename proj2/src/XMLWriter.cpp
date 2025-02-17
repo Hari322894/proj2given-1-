@@ -33,11 +33,12 @@ struct CXMLWriter::SImplementation {
 
     bool WriteEntity(const SXMLEntity &entity) {
         std::string output;
-
+    
+        // Do not indent CharData
         if (PrettyPrint && entity.DType != SXMLEntity::EType::CharData) {
             output += GetIndentation();
         }
-
+    
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
                 output += "<" + entity.DNameData;
@@ -46,35 +47,40 @@ struct CXMLWriter::SImplementation {
                 }
                 output += ">";
                 if (PrettyPrint) {
-                    output += "\n";
                     IndentationLevel++;
                 }
                 break;
-
+    
             case SXMLEntity::EType::EndElement:
                 IndentationLevel--;
                 if (PrettyPrint) {
-                    output += GetIndentation();
+                    output = GetIndentation() + "</" + entity.DNameData + ">";
+                } else {
+                    output += "</" + entity.DNameData + ">";
                 }
-                output += "</" + entity.DNameData + ">\n";
                 break;
-
+    
             case SXMLEntity::EType::CharData:
                 output += EscapeString(entity.DNameData);
                 break;
-
+    
             case SXMLEntity::EType::CompleteElement:
                 output += "<" + entity.DNameData;
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += "/>";
-                if (PrettyPrint) output += "\n";
                 break;
         }
-
+    
+        // Only add newline for StartElement and EndElement (not for CompleteElement)
+        if (PrettyPrint && entity.DType != SXMLEntity::EType::CompleteElement) {
+            output += "\n";
+        }
+    
         return DataSink->Write(std::vector<char>(output.begin(), output.end()));
     }
+    
 
     bool Flush() {
         return true; // No special flushing required for CDataSink
