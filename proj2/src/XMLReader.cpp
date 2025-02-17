@@ -108,6 +108,7 @@ struct CXMLReader::SImplementation {
             
             attrValue = DecodeEntities(attrValue);
             entity.DAttributes.push_back(std::make_pair(attrName, attrValue));
+            SkipWhitespace();
         }
     }
 
@@ -152,26 +153,6 @@ struct CXMLReader::SImplementation {
             return ReadEntity(entity, skipcdata);
         }
 
-        if (ch == '!') {
-            // Check for CDATA section or comments
-            std::string specialTag;
-            for (int i = 0; i < 2; ++i) {
-                if (GetChar(ch)) {
-                    specialTag += ch;
-                }
-            }
-            
-            if (specialTag == "--") {
-                // Skip comments
-                while (GetChar(ch) && !(ch == '-' && GetChar(ch) && ch == '-' && GetChar(ch) && ch == '>')) {}
-                return ReadEntity(entity, skipcdata);
-            }
-            
-            // Skip other special tags
-            while (GetChar(ch) && ch != '>') {}
-            return ReadEntity(entity, skipcdata);
-        }
-
         if (ch == '/') {
             // End element
             entity.DType = SXMLEntity::EType::EndElement;
@@ -185,14 +166,23 @@ struct CXMLReader::SImplementation {
         entity.DNameData = ReadTagName();
         ParseAttributes(entity);
         
-        GetChar(ch);
-        if (ch == '/') {
-            entity.DType = SXMLEntity::EType::CompleteElement;
-            GetChar(ch); // consume '>'
-        } else if (ch == '>') {
-            entity.DType = SXMLEntity::EType::StartElement;
+        // Keep reading until we find either '>' or '/>'
+        bool foundEnd = false;
+        bool isComplete = false;
+        while (GetChar(ch) && !foundEnd) {
+            if (ch == '>') {
+                foundEnd = true;
+            } else if (ch == '/') {
+                if (GetChar(ch) && ch == '>') {
+                    isComplete = true;
+                    foundEnd = true;
+                } else {
+                    UngetChar(ch);
+                }
+            }
         }
 
+        entity.DType = isComplete ? SXMLEntity::EType::CompleteElement : SXMLEntity::EType::StartElement;
         return true;
     }
 };
