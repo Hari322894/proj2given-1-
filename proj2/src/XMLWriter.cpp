@@ -14,7 +14,7 @@ struct CXMLWriter::SImplementation {
     };
     int IndentationLevel = 0;
     const std::string IndentationString = "\t";
-    std::string PendingIndentation;
+    bool NeedsIndentation = false;
 
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
 
@@ -35,8 +35,10 @@ struct CXMLWriter::SImplementation {
 
     // Helper function to add indentation
     void AddIndentation(std::string &output) {
-        output += PendingIndentation;
-        PendingIndentation.clear();
+        if (NeedsIndentation) {
+            output += "\n" + std::string(IndentationLevel, '\t');
+            NeedsIndentation = false;
+        }
     }
 
     bool WriteEntity(const SXMLEntity &entity) {
@@ -50,17 +52,18 @@ struct CXMLWriter::SImplementation {
                 }
                 output += ">";
                 IndentationLevel++;
-                PendingIndentation = "\n" + std::string(IndentationLevel, '\t');
+                NeedsIndentation = true;
                 break;
             case SXMLEntity::EType::EndElement:
                 IndentationLevel--;
                 AddIndentation(output);
                 output += "</" + entity.DNameData + ">";
-                PendingIndentation = "\n" + std::string(IndentationLevel, '\t');
+                NeedsIndentation = true;
                 break;
             case SXMLEntity::EType::CharData:
                 AddIndentation(output);
                 output += EscapeString(entity.DNameData);
+                NeedsIndentation = false;
                 break;
             case SXMLEntity::EType::CompleteElement:
                 AddIndentation(output);
@@ -69,7 +72,7 @@ struct CXMLWriter::SImplementation {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += "/>";
-                PendingIndentation = "\n" + std::string(IndentationLevel, '\t');
+                NeedsIndentation = true;
                 break;
         }
         return DataSink->Write(std::vector<char>(output.begin(), output.end()));
