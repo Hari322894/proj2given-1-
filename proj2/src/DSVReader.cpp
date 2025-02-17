@@ -81,6 +81,7 @@ struct CDSVReader::SImplementation {
         cell += ch;
     }
         }
+    }
         
         // add last cell if there was any data
         if (!cell.empty() || dataRead) {
