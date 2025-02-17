@@ -15,8 +15,12 @@ struct CXMLReader::SImplementation {
         entity.DNameData = name;
 
         // Parse attributes
-        for (int i = 0; atts[i]; i += 2) {
-            entity.DAttributes.emplace_back(atts[i], atts[i + 1]);
+        if (atts != nullptr) {
+            for (int i = 0; atts[i] != nullptr; i += 2) {
+                if (atts[i + 1] != nullptr) {
+                    entity.DAttributes.emplace_back(atts[i], atts[i + 1]);
+                }
+            }
         }
 
         impl->EntityQueue.push(entity);
@@ -32,13 +36,15 @@ struct CXMLReader::SImplementation {
 
     static void CharDataHandler(void *userData, const char *s, int len) {
         auto *impl = static_cast<SImplementation *>(userData);
-        std::string text(s, len);
+        if (s != nullptr && len > 0) {
+            std::string text(s, len);
 
-        if (!text.empty()) {
-            SXMLEntity entity;
-            entity.DType = SXMLEntity::EType::CharData;
-            entity.DNameData = text;
-            impl->EntityQueue.push(entity);
+            if (!text.empty()) {
+                SXMLEntity entity;
+                entity.DType = SXMLEntity::EType::CharData;
+                entity.DNameData = text;
+                impl->EntityQueue.push(entity);
+            }
         }
     }
 
