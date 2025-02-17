@@ -2,10 +2,19 @@
 #include <sstream>
 #include <queue>
 #include <cctype>
+#include <unordered_map>
 
 struct CXMLReader::SImplementation {
     std::shared_ptr<CDataSource> DataSource;
     std::queue<char> Buffer;
+    
+    const std::unordered_map<std::string, char> EntityMap = {
+        {"&amp;", '&'},
+        {"&quot;", '"'},
+        {"&apos;", '\''},
+        {"&lt;", '<'},
+        {"&gt;", '>'}
+    };
     
     SImplementation(std::shared_ptr<CDataSource> src) : DataSource(std::move(src)) {}
 
@@ -31,20 +40,28 @@ struct CXMLReader::SImplementation {
             }
         }
     }
-
-    std::string ReadUntil(char stopChar, bool includeStop = false) {
+    
+    std::string DecodeEntities(const std::string& input) {
         std::string result;
-        char ch;
-        while (GetChar(ch)) {
-            if (ch == stopChar) {
-                if (includeStop) {
-                    result += ch;
-                } else {
-                    UngetChar(ch);
+        size_t pos = 0;
+        
+        while (pos < input.length()) {
+            if (input[pos] == '&') {
+                bool found = false;
+                for (const auto& entity : EntityMap) {
+                    if (input.substr(pos, entity.first.length()) == entity.first) {
+                        result += entity.second;
+                        pos += entity.first.length();
+                        found = true;
+                        break;
+                    }
                 }
-                break;
+                if (!found) {
+                    result += input[pos++];
+                }
+            } else {
+                result += input[pos++];
             }
-            result += ch;
         }
         return result;
     }
@@ -89,6 +106,8 @@ struct CXMLReader::SImplementation {
                 attrValue += ch;
             }
             
+            // Decode entities in attribute value
+            attrValue = DecodeEntities(attrValue);
             entity.DAttributes.push_back(std::make_pair(attrName, attrValue));
         }
     }
@@ -115,14 +134,13 @@ struct CXMLReader::SImplementation {
                 UngetChar(ch);
             }
             
-            // Trim trailing whitespace from charData
             while (!charData.empty() && std::isspace(charData.back())) {
                 charData.pop_back();
             }
             
             if (!skipcdata || !charData.empty()) {
                 entity.DType = SXMLEntity::EType::CharData;
-                entity.DNameData = charData;
+                entity.DNameData = DecodeEntities(charData);
                 return true;
             }
             return ReadEntity(entity, skipcdata);
