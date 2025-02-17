@@ -7,7 +7,6 @@ struct CXMLWriter::SImplementation {
     
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
     
-    // Helper function to escape special XML characters
     std::string EscapeString(const std::string &str) {
         std::string result;
         for (char c : str) {
@@ -28,29 +27,24 @@ struct CXMLWriter::SImplementation {
         
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                if (!StartTagWritten) {
+                if (!StartTagWritten && entity.DNameData == "osm") {
                     output = "<" + entity.DNameData;
-                    // Add attributes
                     for (const auto &attr : entity.DAttributes) {
                         output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                     }
-                    output += ">\n";
+                    output += ">\n\n\t\t";
                     StartTagWritten = true;
                 } else {
-                    output = "\t<" + entity.DNameData;
-                    // Add attributes
+                    output = "<" + entity.DNameData;
                     for (const auto &attr : entity.DAttributes) {
                         output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                     }
-                    output += "/>\n";
+                    output += ">";
                 }
                 break;
                 
             case SXMLEntity::EType::EndElement:
-                // Don't write the closing tag for the root element
-                if (entity.DNameData != "osm") {
-                    output = "</" + entity.DNameData + ">\n";
-                }
+                output = "</" + entity.DNameData + ">";
                 break;
                 
             case SXMLEntity::EType::CharData:
@@ -58,12 +52,19 @@ struct CXMLWriter::SImplementation {
                 break;
                 
             case SXMLEntity::EType::CompleteElement:
-                output = "\t<" + entity.DNameData;
-                // Add attributes
-                for (const auto &attr : entity.DAttributes) {
-                    output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                if (StartTagWritten && entity.DNameData == "node") {
+                    output = "<" + entity.DNameData;
+                    for (const auto &attr : entity.DAttributes) {
+                        output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                    }
+                    output += "/>\n\n\t\t";
+                } else {
+                    output = "<" + entity.DNameData;
+                    for (const auto &attr : entity.DAttributes) {
+                        output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                    }
+                    output += "/>";
                 }
-                output += "/>\n";
                 break;
         }
         
