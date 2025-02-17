@@ -68,46 +68,81 @@ struct CXMLWriter::SImplementation {
     
 
     bool WriteEntity(const SXMLEntity &entity) {
+
         std::string output;
+
         
+
+        // Handle different entity types
+
         switch (entity.DType) {
+
             case SXMLEntity::EType::StartElement:
+
                 output = "<" + entity.DNameData;
+
+                
+
+                // Add attributes
+
                 for (const auto &attr : entity.DAttributes) {
+
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+
                 }
-                output += (entity.DNameData == "osm") ? ">\n\t" : ">";
+
+                output += ">";
+
                 break;
+
                 
+
             case SXMLEntity::EType::EndElement:
-                if (entity.DNameData == "osm") {
-                    return true;  // Skip osm closing tag
-                }
+
                 output = "</" + entity.DNameData + ">";
+
                 break;
+
                 
+
             case SXMLEntity::EType::CharData:
+
                 output = EscapeString(entity.DNameData);
+
                 break;
+
                 
+
             case SXMLEntity::EType::CompleteElement:
-                if (entity.DNameData == "node") {
-                    output = "<" + entity.DNameData;
-                    for (const auto &attr : entity.DAttributes) {
-                        output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
-                    }
-                    output += "/>\n\t";  // Add newline after node
-                } else {
-                    output = "<" + entity.DNameData;
-                    for (const auto &attr : entity.DAttributes) {
-                        output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
-                    }
-                    output += "/>";
+
+                output = "<" + entity.DNameData;
+
+                
+
+                // Add attributes
+
+                for (const auto &attr : entity.DAttributes) {
+
+                    output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+
                 }
+
+                
+
+                // Self-closing tag
+
+                output += "/>";
+
                 break;
+
         }
+
         
+
+        // Write the output to the data sink
+
         return DataSink->Write(std::vector<char>(output.begin(), output.end()));
+
     }
 
     
