@@ -40,7 +40,7 @@ struct CXMLWriter::SImplementation {
             case SXMLEntity::EType::StartElement: {
                 output = "<" + entity.DNameData;
                 
-                // Add attributes
+                // Add attributes in the order they appear
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
@@ -53,13 +53,14 @@ struct CXMLWriter::SImplementation {
                 break;
                 
             case SXMLEntity::EType::CharData:
-                output = entity.DNameData; // Don't escape CharData for whitespace preservation
+                // Properly escape special characters in character data
+                output = EscapeString(entity.DNameData);
                 break;
                 
             case SXMLEntity::EType::CompleteElement: {
                 output = "<" + entity.DNameData;
                 
-                // Add attributes
+                // Add attributes in the order they appear
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
