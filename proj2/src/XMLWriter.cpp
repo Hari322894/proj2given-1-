@@ -49,13 +49,16 @@ struct CXMLWriter::SImplementation {
             }
             
             case SXMLEntity::EType::EndElement:
-                // Don't automatically add closing tags - only if explicitly requested
+                if (entity.DNameData == "osm") {
+                    // Don't write the closing osm tag
+                    return true;
+                }
                 output = "</" + entity.DNameData + ">";
                 break;
                 
             case SXMLEntity::EType::CharData:
-                // Preserve exact character data including whitespace
-                output = entity.DNameData;
+                // Now escape the character data content too
+                output = EscapeString(entity.DNameData);
                 break;
                 
             case SXMLEntity::EType::CompleteElement: {
@@ -70,7 +73,7 @@ struct CXMLWriter::SImplementation {
             }
         }
         
-        // Write the output to the data sink without any additional formatting
+        // Write the output to the data sink
         std::vector<char> outputChars(output.begin(), output.end());
         return DataSink->Write(outputChars);
     }
