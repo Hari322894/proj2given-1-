@@ -4,7 +4,8 @@
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
-    bool isFirstElement = true;  // Added to track first element
+    bool isFirstElement = true;
+    bool isRootElement = true;
    
     // Special character map for XML escaping
     const std::unordered_map<char, std::string> EscapeMap = {
@@ -37,27 +38,28 @@ struct CXMLWriter::SImplementation {
     bool WriteEntity(const SXMLEntity &entity) {
         std::string output;
 
-        // Add newline and tab for non-first elements
-        if (!isFirstElement && entity.DType != SXMLEntity::EType::EndElement) {
-            if (!DataSink->Write(std::vector<char>{'\n', '\t'})) {
-                return false;
-            }
-        }
-       
         // Handle different entity types
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                output = "<" + entity.DNameData;
+                if (!isFirstElement && entity.DNameData != "osm") {
+                    output = "\n\t\n\t\n\t";
+                }
+                output += "<" + entity.DNameData;
                
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += ">";
+                isRootElement = (entity.DNameData == "osm");
                 break;
                
             case SXMLEntity::EType::EndElement:
-                output = "</" + entity.DNameData + ">";
+                if (entity.DNameData == "osm") {
+                    output = "\n\t\n</osm>";
+                } else {
+                    output = "</" + entity.DNameData + ">";
+                }
                 break;
                
             case SXMLEntity::EType::CharData:
@@ -65,7 +67,10 @@ struct CXMLWriter::SImplementation {
                 break;
                
             case SXMLEntity::EType::CompleteElement:
-                output = "<" + entity.DNameData;
+                if (!isFirstElement) {
+                    output = "\n\t\n\t\n\t";
+                }
+                output += "<" + entity.DNameData;
                
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
@@ -77,7 +82,6 @@ struct CXMLWriter::SImplementation {
                 break;
         }
        
-        // Update first element flag
         if (isFirstElement) {
             isFirstElement = false;
         }
