@@ -64,13 +64,14 @@ struct CXMLWriter::SImplementation {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 
-                // Self-closing tag
+                // Self-closing tag with proper XML syntax
                 output += "/>";
                 break;
         }
         
         // Write the output to the data sink
-        return DataSink->Write(std::vector<char>(output.begin(), output.end()));
+        std::vector<char> outputChars(output.begin(), output.end());
+        return DataSink->Write(outputChars);
     }
     
     bool Flush() {
