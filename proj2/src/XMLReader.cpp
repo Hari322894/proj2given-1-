@@ -9,9 +9,11 @@ struct CXMLReader::SImplementation {
     XML_Parser Parser;
     std::queue<SXMLEntity> EntityQueue;
     bool EndOfData;
+    std::string CharDataBuffer;
 
     static void StartElementHandler(void *userData, const char *name, const char **atts) {
         auto *impl = static_cast<SImplementation *>(userData);
+        impl->FlushCharData();
         SXMLEntity entity;
         entity.DType = SXMLEntity::EType::StartElement;
         entity.DNameData = name;
@@ -30,6 +32,7 @@ struct CXMLReader::SImplementation {
 
     static void EndElementHandler(void *userData, const char *name) {
         auto *impl = static_cast<SImplementation *>(userData);
+        impl->FlushCharData();
         SXMLEntity entity;
         entity.DType = SXMLEntity::EType::EndElement;
         entity.DNameData = name;
@@ -39,14 +42,7 @@ struct CXMLReader::SImplementation {
     static void CharDataHandler(void *userData, const char *s, int len) {
         auto *impl = static_cast<SImplementation *>(userData);
         if (s != nullptr && len > 0) {
-            std::string text(s, len);
-
-            if (!text.empty()) {
-                SXMLEntity entity;
-                entity.DType = SXMLEntity::EType::CharData;
-                entity.DNameData = text;
-                impl->EntityQueue.push(entity);
-            }
+            impl->CharDataBuffer.append(s, len);
         }
     }
 
@@ -59,6 +55,16 @@ struct CXMLReader::SImplementation {
 
     ~SImplementation() {
         XML_ParserFree(Parser);
+    }
+
+    void FlushCharData() {
+        if (!CharDataBuffer.empty()) {
+            SXMLEntity entity;
+            entity.DType = SXMLEntity::EType::CharData;
+            entity.DNameData = CharDataBuffer;
+            EntityQueue.push(entity);
+            CharDataBuffer.clear();
+        }
     }
 
     bool ReadEntity(SXMLEntity &entity, bool skipcdata) {
