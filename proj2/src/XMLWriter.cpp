@@ -55,9 +55,10 @@ struct CXMLWriter::SImplementation {
                 IndentationLevel--;
                 AddIndentation(output);
                 output += "</" + entity.DNameData + ">";
+                IsPreviousStartElement = false; // Reset as we are closing an element
                 break;
             case SXMLEntity::EType::CharData:
-                AddIndentation(output);
+                // Avoid adding unnecessary newlines before character data
                 output += EscapeString(entity.DNameData);
                 break;
             case SXMLEntity::EType::CompleteElement:
@@ -67,6 +68,7 @@ struct CXMLWriter::SImplementation {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += "/>";
+                IsPreviousStartElement = false; // Reset as this is a complete element
                 break;
         }
 
