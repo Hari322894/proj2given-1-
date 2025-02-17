@@ -3,10 +3,11 @@
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
+    int IndentationLevel = 0;
+    const std::string IndentationString = "\t";
 
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
 
-    // Helper function to escape special XML characters
     std::string EscapeString(const std::string &str) {
         std::string result;
         result.reserve(str.size() * 2); // Reserve extra space for potential escapes
@@ -35,34 +36,45 @@ struct CXMLWriter::SImplementation {
         return result;
     }
 
+    void AddIndentation(std::string &output) {
+        if (!output.empty()) {
+            output += "\n" + std::string(IndentationLevel, '\t');
+        }
+    }
+
     bool WriteEntity(const SXMLEntity &entity) {
         std::string output;
-        // Handle different entity types
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                output = "<" + entity.DNameData;
-                // Add attributes
+                AddIndentation(output);
+                output += "<" + entity.DNameData;
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += ">";
+                IndentationLevel++;
                 break;
+
             case SXMLEntity::EType::EndElement:
-                output = "</" + entity.DNameData + ">";
+                IndentationLevel--;
+                AddIndentation(output);
+                output += "</" + entity.DNameData + ">";
                 break;
+
             case SXMLEntity::EType::CharData:
-                output = EscapeString(entity.DNameData);
+                output += EscapeString(entity.DNameData);
                 break;
+
             case SXMLEntity::EType::CompleteElement:
-                output = "<" + entity.DNameData;
-                // Add attributes
+                AddIndentation(output);
+                output += "<" + entity.DNameData;
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                // Self-closing tag
-                output += "/>";
+                output += "/>"; // Self-closing tag
                 break;
         }
+
         // Write the output to the data sink
         return DataSink->Write(std::vector<char>(output.begin(), output.end()));
     }
