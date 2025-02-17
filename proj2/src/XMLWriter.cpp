@@ -31,15 +31,15 @@ struct CXMLWriter::SImplementation {
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                // Don't add closing angle bracket for special case of root element
+                // Add double newline after opening osm tag
                 if (entity.DNameData == "osm") {
-                    output += ">\n";
+                    output += ">\n\n";
                 } else {
                     output += ">";
                 }
                 break;
             case SXMLEntity::EType::EndElement:
-                // Skip end element for osm tag to match expected format
+                // Skip end element for osm tag completely
                 if (entity.DNameData != "osm") {
                     output = "</" + entity.DNameData + ">";
                 }
@@ -48,11 +48,11 @@ struct CXMLWriter::SImplementation {
                 output = EscapeString(entity.DNameData);
                 break;
             case SXMLEntity::EType::CompleteElement:
-                output = "\t<" + entity.DNameData;
+                output = "\t\t<" + entity.DNameData;  // Double tab indentation
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                output += "/>\n";
+                output += "/>\n\n";  // Double newline after each complete element
                 break;
         }
         return DataSink->Write(std::vector<char>(output.begin(), output.end()));
@@ -62,6 +62,7 @@ struct CXMLWriter::SImplementation {
         return true;
     }
 };
+
 
 CXMLWriter::CXMLWriter(std::shared_ptr<CDataSink> sink)
     : DImplementation(std::make_unique<SImplementation>(std::move(sink))) {}
