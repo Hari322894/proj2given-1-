@@ -40,7 +40,7 @@ struct CXMLReader::SImplementation {
             }
         }
     }
-    
+
     std::string DecodeEntities(const std::string& input) {
         std::string result;
         size_t pos = 0;
