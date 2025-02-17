@@ -14,7 +14,7 @@ struct CXMLWriter::SImplementation {
     };
     int IndentationLevel = 0;
     const std::string IndentationString = "\t";
-    bool PreviousWasEndElement = false;
+    bool NeedsIndentation = false;
 
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
 
@@ -33,47 +33,61 @@ struct CXMLWriter::SImplementation {
         return result;
     }
 
+    // Helper function to add indentation
+    void AddIndentation(std::string &output) {
+        for (int i = 0; i < IndentationLevel; ++i) {
+            output += IndentationString;
+        }
+    }
+
     bool WriteEntity(const SXMLEntity &entity) {
         std::string output;
         // Handle different entity types
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                if (PreviousWasEndElement) {
+                if (NeedsIndentation) {
                     output += "\n";
+                    AddIndentation(output);
                 }
-                output += std::string(IndentationLevel, '\t') + "<" + entity.DNameData;
+                output += "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += ">";
                 IndentationLevel++;
-                PreviousWasEndElement = false;
+                NeedsIndentation = true;
                 break;
             case SXMLEntity::EType::EndElement:
                 IndentationLevel--;
-                if (!PreviousWasEndElement) {
-                    output += "\n" + std::string(IndentationLevel, '\t');
+                if (NeedsIndentation) {
+                    output += "\n";
+                    AddIndentation(output);
                 }
                 output += "</" + entity.DNameData + ">";
-                PreviousWasEndElement = true;
+                NeedsIndentation = true;
                 break;
             case SXMLEntity::EType::CharData:
+                if (NeedsIndentation) {
+                    output += "\n";
+                    AddIndentation(output);
+                }
                 output += EscapeString(entity.DNameData);
-                PreviousWasEndElement = false;
+                NeedsIndentation = false;
                 break;
             case SXMLEntity::EType::CompleteElement:
-                if (PreviousWasEndElement) {
+                if (NeedsIndentation) {
                     output += "\n";
+                    AddIndentation(output);
                 }
-                output += std::string(IndentationLevel, '\t') + "<" + entity.DNameData;
+                output += "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 // Self-closing tag
                 output += "/>";
-                PreviousWasEndElement = true;
+                NeedsIndentation = true;
                 break;
         }
         // Write the output to the data sink
