@@ -2,119 +2,131 @@
 #include <vector>
 #include <string>
 
-class CXMLWriter {
-private:
-    class Implementation {
-    private:
-        std::shared_ptr<CDataSink> dataSink;
-        std::vector<std::string> openElements;
-
-        bool writeDirect(const std::string& str) {
-            for (char c : str) {
-                if (!dataSink->Put(c)) {
-                    return false;
-                }
+struct CXMLWriter::SImplementation {
+    std::shared_ptr<CDataSink> DDataSink;
+    std::vector<std::string> DElementList;  // Using vector instead of stack
+    
+    SImplementation(std::shared_ptr<CDataSink> sink)
+        : DDataSink(sink) {}
+    
+    bool WriteString(const std::string& str) {
+        for (char ch : str) {
+            if (!DDataSink->Put(ch)) {
+                return false;
             }
-            return true;
         }
-
-        bool writeEscapedContent(const std::string& content) {
-            for (char c : content) {
-                bool success = true;
-                switch (c) {
-                    case '<':  success = writeDirect("&lt;"); break;
-                    case '>':  success = writeDirect("&gt;"); break;
-                    case '&':  success = writeDirect("&amp;"); break;
-                    case '\'': success = writeDirect("&apos;"); break;
-                    case '"':  success = writeDirect("&quot;"); break;
-                    default:   success = dataSink->Put(c); break;
-                }
-                if (!success) return false;
-            }
-            return true;
-        }
-
-        bool writeAttributeList(const std::vector<std::pair<std::string, std::string>>& attributes) {
-            for (const auto& attr : attributes) {
-                if (!writeDirect(" ") ||
-                    !writeDirect(attr.first) ||
-                    !writeDirect("=\"") ||
-                    !writeEscapedContent(attr.second) ||
-                    !writeDirect("\"")) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-    public:
-        explicit Implementation(std::shared_ptr<CDataSink> sink) 
-            : dataSink(std::move(sink)) {}
-
-        bool flush() {
-            for (auto it = openElements.rbegin(); it != openElements.rend(); ++it) {
-                if (!writeDirect("</") ||
-                    !writeDirect(*it) ||
-                    !writeDirect(">")) {
-                    return false;
-                }
-            }
-            openElements.clear();
-            return true;
-        }
-
-        bool writeEntity(const SXMLEntity& entity) {
-            switch (entity.DType) {
-                case SXMLEntity::EType::StartElement:
-                    if (!writeDirect("<") ||
-                        !writeDirect(entity.DNameData) ||
-                        !writeAttributeList(entity.DAttributes) ||
-                        !writeDirect(">")) {
-                        return false;
-                    }
-                    openElements.push_back(entity.DNameData);
-                    return true;
-
-                case SXMLEntity::EType::EndElement:
-                    if (!writeDirect("</") ||
-                        !writeDirect(entity.DNameData) ||
-                        !writeDirect(">")) {
-                        return false;
-                    }
-                    if (!openElements.empty()) {
-                        openElements.pop_back();
-                    }
-                    return true;
-
-                case SXMLEntity::EType::CharData:
-                    return writeEscapedContent(entity.DNameData);
-
-                case SXMLEntity::EType::CompleteElement:
-                    if (!writeDirect("<") ||
-                        !writeDirect(entity.DNameData) ||
-                        !writeAttributeList(entity.DAttributes) ||
-                        !writeDirect("/>")) {
-                        return false;
-                    }
-                    return true;
-            }
-            return false;
-        }
-    };
-
-    std::unique_ptr<Implementation> impl;
-
-public:
-    explicit CXMLWriter(std::shared_ptr<CDataSink> sink)
-        : impl(std::make_unique<Implementation>(std::move(sink))) {}
-
-    ~CXMLWriter() = default;
-
-    bool Flush() {
-        return impl->flush();
+        return true;
     }
-
+    
+    bool WriteEscaped(const std::string& str) {
+        for (char ch : str) {
+            switch (ch) {
+                case '<':
+                    if (!WriteString("&lt;")) return false;
+                    break;
+                case '>':
+                    if (!WriteString("&gt;")) return false;
+                    break;
+                case '&':
+                    if (!WriteString("&amp;")) return false;
+                    break;
+                case '\'':
+                    if (!WriteString("&apos;")) return false;
+                    break;
+                case '"':
+                    if (!WriteString("&quot;")) return false;
+                    break;
+                default:
+                    if (!DDataSink->Put(ch)) return false;
+            }
+        }
+        return true;
+    }
+    
+    bool Flush() {
+        for (auto it = DElementList.rbegin(); it != DElementList.rend(); ++it) {
+            if (!WriteString("</") ||
+                !WriteString(*it) ||
+                !WriteString(">")) {
+                return false;
+            }
+        }
+        DElementList.clear();
+        return true;
+    }
+    
     bool WriteEntity(const SXMLEntity& entity) {
-        return impl->writeEntity(entity);
+        switch (entity.DType) {
+            case SXMLEntity::EType::StartElement:
+                if (!WriteString("<") ||
+                    !WriteString(entity.DNameData)) {
+                    return false;
+                }
+                for (const auto& attr : entity.DAttributes) {
+                    if (!WriteString(" ") ||
+                        !WriteString(attr.first) ||
+                        !WriteString("=\"") ||
+                        !WriteEscaped(attr.second) ||
+                        !WriteString("\"")) {
+                        return false;
+                    }
+                }
+                if (!WriteString(">")) {
+                    return false;
+                }
+                DElementList.push_back(entity.DNameData);
+                break;
+                
+            case SXMLEntity::EType::EndElement:
+                if (!WriteString("</") ||
+                    !WriteString(entity.DNameData) ||
+                    !WriteString(">")) {
+                    return false;
+                }
+                if (!DElementList.empty()) {
+                    DElementList.pop_back();
+                }
+                break;
+                
+            case SXMLEntity::EType::CharData:
+                if (!WriteEscaped(entity.DNameData)) {
+                    return false;
+                }
+                break;
+                
+            case SXMLEntity::EType::CompleteElement:
+                if (!WriteString("<") ||
+                    !WriteString(entity.DNameData)) {
+                    return false;
+                }
+                for (const auto& attr : entity.DAttributes) {
+                    if (!WriteString(" ") ||
+                        !WriteString(attr.first) ||
+                        !WriteString("=\"") ||
+                        !WriteEscaped(attr.second) ||
+                        !WriteString("\"")) {
+                        return false;
+                    }
+                }
+                if (!WriteString("/>")) {
+                    return false;
+                }
+                break;
+        }
+        return true;
     }
 };
+
+CXMLWriter::CXMLWriter(std::shared_ptr<CDataSink> sink)
+    : DImplementation(std::make_unique<SImplementation>(sink)) {
+}
+
+CXMLWriter::~CXMLWriter() = default;
+
+bool CXMLWriter::Flush() {
+    return DImplementation->Flush();
+}
+
+bool CXMLWriter::WriteEntity(const SXMLEntity& entity) {
+    return DImplementation->WriteEntity(entity);
+}
