@@ -1,6 +1,7 @@
 #include "XMLReader.h"
 #include <sstream>
 #include <queue>
+#include <cctype>
 
 struct CXMLReader::SImplementation {
     std::shared_ptr<CDataSource> DataSource;
@@ -48,12 +49,11 @@ struct CXMLReader::SImplementation {
         return result;
     }
 
-    // Read tag name, stopping at whitespace or >, but not including the stop character
     std::string ReadTagName() {
         std::string result;
         char ch;
         while (GetChar(ch)) {
-            if (std::isspace(ch) || ch == '>' || ch == '/') {
+            if (std::isspace(ch) || ch == '>' || ch == '/' || ch == '=') {
                 UngetChar(ch);
                 break;
             }
@@ -64,6 +64,7 @@ struct CXMLReader::SImplementation {
 
     void ParseAttributes(SXMLEntity& entity) {
         char ch;
+        SkipWhitespace();
         while (GetChar(ch)) {
             if (ch == '>' || ch == '/') {
                 UngetChar(ch);
@@ -73,26 +74,21 @@ struct CXMLReader::SImplementation {
                 continue;
             }
 
-            // Read attribute name
             UngetChar(ch);
             std::string attrName = ReadTagName();
             
-            // Get the = sign
             SkipWhitespace();
             GetChar(ch); // =
-            
-            // Skip whitespace before value
             SkipWhitespace();
             
-            // Get opening quote
             GetChar(ch); // " or '
             char quote = ch;
             
-            // Read attribute value
-            std::string attrValue = ReadUntil(quote);
-            GetChar(ch); // consume closing quote
+            std::string attrValue;
+            while (GetChar(ch) && ch != quote) {
+                attrValue += ch;
+            }
             
-            // Add attribute as a pair to the vector
             entity.DAttributes.push_back(std::make_pair(attrName, attrValue));
         }
     }
@@ -118,6 +114,12 @@ struct CXMLReader::SImplementation {
             if (ch == '<') {
                 UngetChar(ch);
             }
+            
+            // Trim trailing whitespace from charData
+            while (!charData.empty() && std::isspace(charData.back())) {
+                charData.pop_back();
+            }
+            
             if (!skipcdata || !charData.empty()) {
                 entity.DType = SXMLEntity::EType::CharData;
                 entity.DNameData = charData;
@@ -126,7 +128,13 @@ struct CXMLReader::SImplementation {
             return ReadEntity(entity, skipcdata);
         }
 
+        // Handle special tags
         GetChar(ch);
+        if (ch == '?') {
+            while (GetChar(ch) && !(ch == '?' && GetChar(ch) && ch == '>')) {}
+            return ReadEntity(entity, skipcdata);
+        }
+
         if (ch == '/') {
             // End element
             entity.DType = SXMLEntity::EType::EndElement;
@@ -136,25 +144,14 @@ struct CXMLReader::SImplementation {
             return true;
         }
 
-        // Skip XML declaration or other special tags
-        if (ch == '?') {
-            while (GetChar(ch) && !(ch == '?' && GetChar(ch) && ch == '>')) {}
-            return ReadEntity(entity, skipcdata);
-        }
-
         // Start or complete element
         UngetChar(ch);
         entity.DNameData = ReadTagName();
         
-        // Skip whitespace and parse attributes if any
         SkipWhitespace();
+        ParseAttributes(entity);
+        
         GetChar(ch);
-        if (ch != '>' && ch != '/') {
-            UngetChar(ch);
-            ParseAttributes(entity);
-            GetChar(ch);
-        }
-
         if (ch == '/') {
             entity.DType = SXMLEntity::EType::CompleteElement;
             GetChar(ch); // consume '>'
