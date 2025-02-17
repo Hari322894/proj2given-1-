@@ -14,6 +14,7 @@ struct CXMLWriter::SImplementation {
     };
     int IndentationLevel = 0;
     const std::string IndentationString = "\t";
+    bool PreviousWasEndElement = false;
 
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
 
@@ -37,29 +38,42 @@ struct CXMLWriter::SImplementation {
         // Handle different entity types
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
+                if (PreviousWasEndElement) {
+                    output += "\n";
+                }
                 output += std::string(IndentationLevel, '\t') + "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                output += ">\n";
+                output += ">";
                 IndentationLevel++;
+                PreviousWasEndElement = false;
                 break;
             case SXMLEntity::EType::EndElement:
                 IndentationLevel--;
-                output += std::string(IndentationLevel, '\t') + "</" + entity.DNameData + ">\n";
+                if (!PreviousWasEndElement) {
+                    output += "\n" + std::string(IndentationLevel, '\t');
+                }
+                output += "</" + entity.DNameData + ">";
+                PreviousWasEndElement = true;
                 break;
             case SXMLEntity::EType::CharData:
-                output += std::string(IndentationLevel, '\t') + EscapeString(entity.DNameData) + "\n";
+                output += EscapeString(entity.DNameData);
+                PreviousWasEndElement = false;
                 break;
             case SXMLEntity::EType::CompleteElement:
+                if (PreviousWasEndElement) {
+                    output += "\n";
+                }
                 output += std::string(IndentationLevel, '\t') + "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 // Self-closing tag
-                output += "/>\n";
+                output += "/>";
+                PreviousWasEndElement = true;
                 break;
         }
         // Write the output to the data sink
@@ -72,7 +86,7 @@ struct CXMLWriter::SImplementation {
 };
 
 CXMLWriter::CXMLWriter(std::shared_ptr<CDataSink> sink)
-    : DImplementation(std::make_unique<SImplementation>(sink)) {}
+    : DImplementation(std::make_unique<SImplementation>(std::move(sink))) {}
 
 CXMLWriter::~CXMLWriter() = default;
 
