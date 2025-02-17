@@ -86,12 +86,12 @@ struct CXMLReader::SImplementation {
             if (!GetChar(ch)) {
                 break;
             }
-            
+    
             if (ch == '>' || ch == '/') {
                 UngetChar(ch);
                 break;
             }
-            
+    
             UngetChar(ch);
             std::string attrName = ReadTagName();
             if (attrName.empty()) {
@@ -101,7 +101,7 @@ struct CXMLReader::SImplementation {
             SkipWhitespace();
             if (!GetChar(ch) || ch != '=') {
                 UngetChar(ch);
-                entity.DAttributes.push_back(std::make_pair(attrName, ""));
+                entity.DAttributes.emplace_back(attrName, "");
                 continue;
             }
     
@@ -109,11 +109,12 @@ struct CXMLReader::SImplementation {
             if (!GetChar(ch)) {
                 break;
             }
-            
+    
             std::string attrValue;
             if (ch == '"' || ch == '\'') {
                 char quote = ch;
-                while (GetChar(ch) && ch != quote) {
+                while (GetChar(ch)) {
+                    if (ch == quote) break;
                     attrValue += ch;
                 }
             } else {
@@ -127,9 +128,10 @@ struct CXMLReader::SImplementation {
             }
     
             attrValue = DecodeEntities(attrValue);
-            entity.DAttributes.push_back(std::make_pair(attrName, attrValue));
+            entity.DAttributes.emplace_back(attrName, attrValue);
         }
     }
+    
     
     bool ReadEntity(SXMLEntity& entity, bool skipcdata) {
         entity.DAttributes.clear();
