@@ -3,7 +3,6 @@
 #include <queue>
 #include <cctype>
 #include <unordered_map>
-#include <iostream> 
 
 struct CXMLReader::SImplementation {
     std::shared_ptr<CDataSource> DataSource;
@@ -87,12 +86,12 @@ struct CXMLReader::SImplementation {
             if (!GetChar(ch)) {
                 break;
             }
-    
+            
             if (ch == '>' || ch == '/') {
                 UngetChar(ch);
                 break;
             }
-    
+            
             UngetChar(ch);
             std::string attrName = ReadTagName();
             if (attrName.empty()) {
@@ -110,7 +109,7 @@ struct CXMLReader::SImplementation {
             if (!GetChar(ch)) {
                 break;
             }
-    
+            
             std::string attrValue;
             if (ch == '"' || ch == '\'') {
                 char quote = ch;
@@ -159,19 +158,17 @@ struct CXMLReader::SImplementation {
     
             entity.DType = SXMLEntity::EType::CharData;
             entity.DNameData = DecodeEntities(charData);
-            std::cout << "CharData: " << entity.DNameData << std::endl;
             return true;
         }
     
         if (!GetChar(ch)) {
             return false;
         }
-    
+        
         if (ch == '/') {
             entity.DType = SXMLEntity::EType::EndElement;
             entity.DNameData = ReadTagName();
             while (GetChar(ch) && ch != '>') {}
-            std::cout << "EndElement: " << entity.DNameData << std::endl;
             return true;
         }
     
@@ -200,7 +197,6 @@ struct CXMLReader::SImplementation {
         UngetChar(ch);
         entity.DType = SXMLEntity::EType::StartElement;
         entity.DNameData = ReadTagName();
-        std::cout << "StartElement: " << entity.DNameData << std::endl;
         ParseAttributes(entity);
     
         if (!GetChar(ch)) {
@@ -212,11 +208,6 @@ struct CXMLReader::SImplementation {
             GetChar(ch);  // Consume '>'
         } else if (ch != '>') {
             UngetChar(ch);
-        }
-    
-        std::cout << "ElementType: " << (entity.DType == SXMLEntity::EType::CompleteElement ? "CompleteElement" : "StartElement") << std::endl;
-        for (const auto& attr : entity.DAttributes) {
-            std::cout << "Attribute: " << attr.first << " = " << attr.second << std::endl;
         }
     
         return true;
