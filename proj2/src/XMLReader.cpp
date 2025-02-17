@@ -54,31 +54,34 @@ struct CXMLReader::SImplementation {
     }
 
     bool ReadEntity(SXMLEntity &entity, bool skipcdata) {
-        if (!EntityQueue.empty()) {
-            entity = EntityQueue.front();
-            EntityQueue.pop();
-            return true;
-        }
+        while (EntityQueue.empty()) {
+            std::vector<char> buffer(4096); // Use vector instead of char array
+            size_t length = DataSource->Read(buffer, buffer.size());
 
-        std::vector<char> buffer(4096); // Use vector instead of char array
-        size_t length = DataSource->Read(buffer, buffer.size());
+            if (length == 0) {
+                // No more data to read
+                break;
+            }
 
-
-        if (length == 0) {
-            return false;
-        }
-
-        if (XML_Parse(Parser, buffer.data(), length, length == 0) == XML_STATUS_ERROR) {
-            return false;
+            if (XML_Parse(Parser, buffer.data(), length, length == 0) == XML_STATUS_ERROR) {
+                // Parsing error
+                return false;
+            }
         }
 
         if (!EntityQueue.empty()) {
             entity = EntityQueue.front();
             EntityQueue.pop();
+
+            // Skip CDATA if requested
+            if (skipcdata && entity.DType == SXMLEntity::EType::CharData) {
+                return ReadEntity(entity, skipcdata); // Recursively skip CDATA
+            }
+
             return true;
         }
 
-        return false;
+        return false; // No more entities to read
     }
 };
 
@@ -88,7 +91,7 @@ CXMLReader::CXMLReader(std::shared_ptr<CDataSource> src)
 CXMLReader::~CXMLReader() = default;
 
 bool CXMLReader::End() const {
-    return DImplementation->DataSource->End();
+    return DImplementation->DataSource->End() && DImplementation->EntityQueue.empty();
 }
 
 bool CXMLReader::ReadEntity(SXMLEntity &entity, bool skipcdata) {
