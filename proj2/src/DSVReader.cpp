@@ -14,6 +14,7 @@ struct CDSVReader::SImplementation {
         char ch;
         bool inQuotes = false;
         bool hasData = false;
+        bool preserveQuotes = false;  // NEW: Track if quotes should be kept
 
         while (!DataSource->End()) {
             if (!DataSource->Get(ch)) return false;
@@ -37,7 +38,8 @@ struct CDSVReader::SImplementation {
                                 row.push_back(cell);
                                 return true;
                             } else if (!DataSource->End()) {
-                                // Unexpected character after closing quote
+                                // Preserve quotes in output if necessary
+                                preserveQuotes = true;
                                 cell += nextChar;
                             }
                         }
@@ -45,11 +47,13 @@ struct CDSVReader::SImplementation {
                 } else {
                     // Starting a quoted section
                     inQuotes = true;
+                    preserveQuotes = true;
                 }
             } else if (ch == Delimiter && !inQuotes) {
                 // Outside quotes, delimiter means end of cell
                 row.push_back(cell);
                 cell.clear();
+                preserveQuotes = false;
             } else if ((ch == '\n' || ch == '\r') && !inQuotes) {
                 // Newline outside quotes means end of row
                 if (!cell.empty() || !row.empty()) {
@@ -64,6 +68,9 @@ struct CDSVReader::SImplementation {
 
         // Add the last cell if there was any data
         if (!cell.empty() || hasData) {
+            if (preserveQuotes) {
+                cell = "\"" + cell + "\"";  // NEW: Preserve quotes in the output
+            }
             row.push_back(cell);
         }
 
