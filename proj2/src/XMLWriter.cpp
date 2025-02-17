@@ -41,8 +41,8 @@ struct CXMLWriter::SImplementation {
         // Handle different entity types
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                if (!isFirstElement && entity.DNameData != "osm") {
-                    output = "\n\t\n\t\n\t";
+                if (!isFirstElement && !isRootElement) {
+                    output += "\n\t\n\t\n\t"; // Add newlines and tabs before nested elements
                 }
                 output += "<" + entity.DNameData;
                
@@ -56,9 +56,9 @@ struct CXMLWriter::SImplementation {
                
             case SXMLEntity::EType::EndElement:
                 if (entity.DNameData == "osm") {
-                    output = "\n\t\n</osm>";
+                    output += "\n\t\n</osm>"; // Add newlines and tabs before closing root element
                 } else {
-                    output = "</" + entity.DNameData + ">";
+                    output += "</" + entity.DNameData + ">";
                 }
                 break;
                
@@ -68,7 +68,7 @@ struct CXMLWriter::SImplementation {
                
             case SXMLEntity::EType::CompleteElement:
                 if (!isFirstElement) {
-                    output = "\n\t\n\t\n\t";
+                    output += "\n\t\n\t\n\t"; // Add newlines and tabs before self-closing elements
                 }
                 output += "<" + entity.DNameData;
                
@@ -91,7 +91,7 @@ struct CXMLWriter::SImplementation {
     }
    
     bool Flush() {
-        return true; // No Flush() method in CDataSink
+        return DataSink->Flush(); // Call Flush() on the data sink if available
     }
 };
 
