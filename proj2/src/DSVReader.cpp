@@ -32,16 +32,17 @@ struct CDSVReader::SImplementation {
                             } else {
                                 // End of quoted section
                                 inQuotes = false;
-                                
-                                // Push the current cell and clear it
-                                if (nextChar == Delimiter) {
-                                    row.push_back(cell);
-                                    cell.clear();
-                                } else if (nextChar == '\n' || nextChar == '\r') {
-                                    row.push_back(cell);
-                                    return true;
-                                } else if (!DataSource->End()) {
-                                    // Unexpected character after closing quote
+                                if (nextChar == Delimiter || nextChar == '\n' || nextChar == '\r') {
+                                    // Valid termination, process as normal
+                                    if (nextChar == Delimiter) {
+                                        row.push_back(cell);
+                                        cell.clear();
+                                    } else {
+                                        row.push_back(cell);
+                                        return true;
+                                    }
+                                } else {
+                                    // If the next character is unexpected, include it
                                     cell += nextChar;
                                 }
                             }
@@ -65,22 +66,15 @@ struct CDSVReader::SImplementation {
                     cell += ch;
                 }
             }
-            
-            // If the cell has data and ends with a quote, remove the surrounding quotes
-            if (!cell.empty() && inQuotes) {
-                // Remove the leading and trailing quotes
-                if (cell.front() == '"' && cell.back() == '"') {
-                    cell = cell.substr(1, cell.size() - 2);
-                }
-            }
         
-            // Add the last cell if there was any data
+            // Add last cell if there was any data
             if (!cell.empty() || hasData) {
                 row.push_back(cell);
             }
         
             return hasData;
-        }        
+        }
+        
 };
 
 CDSVReader::CDSVReader(std::shared_ptr<CDataSource> src, char delimiter)
