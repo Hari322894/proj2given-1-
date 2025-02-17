@@ -17,16 +17,21 @@ TEST_FILES = $(wildcard $(TEST_DIR)/*.cpp)
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC_FILES))
 TEST_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(TEST_FILES))
 
-# Output binary
+# Output binaries
 TARGET = $(BIN_DIR)/testproj2
+DRIVER = driver
 
 # Default target
-all: $(TARGET)
+all: $(TARGET) $(DRIVER)
 
-# Rule to build the final binary
+# Rule to build the test binary
 $(TARGET): $(OBJ_FILES) $(TEST_OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+
+# Rule to build the driver binary in the root directory
+$(DRIVER): $(OBJ_FILES) driver.cpp
+	$(CXX) $(CXXFLAGS) $(OBJ_FILES) driver.cpp -o $@ $(LDFLAGS)
 
 # Rule to compile source files into object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
@@ -40,7 +45,7 @@ $(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
 
 # Clean up build artifacts
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
+	rm -rf $(OBJ_DIR) $(BIN_DIR) $(DRIVER)
 
 # Phony targets
 .PHONY: all clean
