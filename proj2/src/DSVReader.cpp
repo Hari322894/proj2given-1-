@@ -8,33 +8,48 @@ struct CDSVReader::SImplementation {
     SImplementation(std::shared_ptr<CDataSource> src, char delimiter)
         : DataSource(std::move(src)), Delimiter(delimiter) {}
 
-        bool ReadRow(std::vector<std::string> &row) {
-            row.clear();
-            std::string cell;
-            char ch;
-            bool inQuotes = false;
-        
-            while (!DataSource->End()) {
-                if (!DataSource->Get(ch)) return false;
-        
-                if (ch == '"') {
-                    inQuotes = !inQuotes;  // Toggle quote mode
-                } else if (ch == Delimiter && !inQuotes) {
-                    row.push_back(cell);  // Push cell when delimiter is hit outside quotes
-                    cell.clear();
+    bool ReadRow(std::vector<std::string> &row) {
+        row.clear();
+        std::string cell;
+        char ch;
+        bool inQuotes = false;
+        bool hasData = false;
+
+        while (!DataSource->End()) {
+            if (!DataSource->Get(ch)) return false;
+
+            hasData = true;
+
+            if (ch == '"') {
+                // Handle escaped quotes (e.g., "My name is ""Bob""!")
+                if (inQuotes && !DataSource->End()) {
+                    char nextChar;
+                    if (DataSource->Get(nextChar)) {
+                        if (nextChar == '"') {
+                            cell += '"';  // Add escaped quote
+                        } else {
+                            DataSource->Unget(nextChar);  // Unget the character
+                            inQuotes = !inQuotes;  // Toggle quote mode
+                        }
+                    }
                 } else {
-                    cell += ch;
+                    inQuotes = !inQuotes;  // Toggle quote mode
                 }
+            } else if (ch == Delimiter && !inQuotes) {
+                row.push_back(cell);  // Push cell when delimiter is hit outside quotes
+                cell.clear();
+            } else {
+                cell += ch;
             }
-        
-            // Add the last cell
-            if (!cell.empty() || !row.empty()) {
-                row.push_back(cell);
-            }
-        
-            return true;
         }
-        
+
+        // Add the last cell if there was any data
+        if (!cell.empty() || hasData) {
+            row.push_back(cell);
+        }
+
+        return hasData;
+    }
 };
 
 CDSVReader::CDSVReader(std::shared_ptr<CDataSource> src, char delimiter)
