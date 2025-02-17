@@ -4,7 +4,6 @@
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
-    // Special character map for XML escaping
     const std::unordered_map<char, std::string> EscapeMap = {
         {'&', "&amp;"},
         {'"', "&quot;"},
@@ -18,7 +17,6 @@ struct CXMLWriter::SImplementation {
 
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
 
-    // Helper function to escape special XML characters
     std::string EscapeString(const std::string &str) {
         std::string result;
         result.reserve(str.size() * 2); // Reserve extra space for potential escapes
@@ -33,7 +31,6 @@ struct CXMLWriter::SImplementation {
         return result;
     }
 
-    // Helper function to add indentation
     void AddIndentation(std::string &output) {
         if (IsPreviousStartElement) {
             output += "\n" + std::string(IndentationLevel, '\t');
@@ -72,11 +69,14 @@ struct CXMLWriter::SImplementation {
                 output += "/>";
                 break;
         }
+
+        // Write the output to the data sink
         return DataSink->Write(std::vector<char>(output.begin(), output.end()));
     }
 
     bool Flush() {
-        return true; // No Flush() method in CDataSink
+        // No Flush() method in CDataSink
+        return true;
     }
 };
 
