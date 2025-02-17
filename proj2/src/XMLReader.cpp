@@ -36,7 +36,7 @@ struct CXMLReader::SImplementation {
         while (GetChar(ch)) {
             if (!std::isspace(ch)) {
                 UngetChar(ch);
-                break;
+                return;
             }
         }
     }
@@ -81,26 +81,35 @@ struct CXMLReader::SImplementation {
 
     void ParseAttributes(SXMLEntity& entity) {
         char ch;
-        SkipWhitespace();
-        while (GetChar(ch)) {
+        
+        while (true) {
+            SkipWhitespace();
+            if (!GetChar(ch)) {
+                break;
+            }
+            
             if (ch == '>' || ch == '/') {
                 UngetChar(ch);
                 break;
             }
-            if (std::isspace(ch)) {
-                continue;
-            }
-
+            
             UngetChar(ch);
             std::string attrName = ReadTagName();
+            if (attrName.empty()) {
+                break;
+            }
             
             SkipWhitespace();
-            GetChar(ch); // =
-            SkipWhitespace();
+            if (!GetChar(ch) || ch != '=') {
+                break;
+            }
             
-            GetChar(ch); // " or '
+            SkipWhitespace();
+            if (!GetChar(ch) || (ch != '"' && ch != '\'')) {
+                break;
+            }
+            
             char quote = ch;
-            
             std::string attrValue;
             while (GetChar(ch) && ch != quote) {
                 attrValue += ch;
@@ -108,7 +117,6 @@ struct CXMLReader::SImplementation {
             
             attrValue = DecodeEntities(attrValue);
             entity.DAttributes.push_back(std::make_pair(attrName, attrValue));
-            SkipWhitespace();
         }
     }
 
@@ -127,15 +135,13 @@ struct CXMLReader::SImplementation {
             // Character data
             std::string charData;
             charData += ch;
-            while (GetChar(ch)) {
-                if (ch == '<') {
-                    UngetChar(ch);
-                    break;
-                }
+            while (GetChar(ch) && ch != '<') {
                 charData += ch;
             }
+            if (ch == '<') {
+                UngetChar(ch);
+            }
             
-            // If skipcdata is true, skip this character data and read next entity
             if (skipcdata) {
                 return ReadEntity(entity, skipcdata);
             }
@@ -148,41 +154,49 @@ struct CXMLReader::SImplementation {
         // Handle special tags
         GetChar(ch);
         if (ch == '?') {
-            // Skip processing instructions
             while (GetChar(ch) && !(ch == '?' && GetChar(ch) && ch == '>')) {}
             return ReadEntity(entity, skipcdata);
         }
 
+        if (ch == '!') {
+            std::string specialTag;
+            for (int i = 0; i < 2; ++i) {
+                if (GetChar(ch)) {
+                    specialTag += ch;
+                }
+            }
+            
+            if (specialTag == "--") {
+                while (GetChar(ch) && !(ch == '-' && GetChar(ch) && ch == '-' && GetChar(ch) && ch == '>')) {}
+                return ReadEntity(entity, skipcdata);
+            }
+            
+            while (GetChar(ch) && ch != '>') {}
+            return ReadEntity(entity, skipcdata);
+        }
+
         if (ch == '/') {
-            // End element
             entity.DType = SXMLEntity::EType::EndElement;
             entity.DNameData = ReadTagName();
             while (GetChar(ch) && ch != '>') {}
             return true;
         }
 
-        // Start or complete element
         UngetChar(ch);
         entity.DNameData = ReadTagName();
         ParseAttributes(entity);
         
-        // Keep reading until we find either '>' or '/>'
-        bool foundEnd = false;
-        bool isComplete = false;
-        while (GetChar(ch) && !foundEnd) {
-            if (ch == '>') {
-                foundEnd = true;
-            } else if (ch == '/') {
-                if (GetChar(ch) && ch == '>') {
-                    isComplete = true;
-                    foundEnd = true;
-                } else {
-                    UngetChar(ch);
-                }
-            }
+        if (!GetChar(ch)) {
+            return false;
+        }
+        
+        if (ch == '/') {
+            entity.DType = SXMLEntity::EType::CompleteElement;
+            GetChar(ch); // consume '>'
+        } else if (ch == '>') {
+            entity.DType = SXMLEntity::EType::StartElement;
         }
 
-        entity.DType = isComplete ? SXMLEntity::EType::CompleteElement : SXMLEntity::EType::StartElement;
         return true;
     }
 };
