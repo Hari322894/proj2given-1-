@@ -37,41 +37,36 @@ struct CXMLWriter::SImplementation {
         std::string output;
         
         // Handle different entity types
-        if (entity.DType == SXMLEntity::EType::StartElement) {
-            output = "<" + entity.DNameData;
-            
-            // Add attributes
-            for (const auto &attr : entity.DAttributes) {
-                output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
-            }
-            
-            // Self-closing tag if no content
-            if (entity.DContent.empty()) {
+        switch (entity.DType) {
+            case SXMLEntity::EType::StartElement:
+                output = "<" + entity.DNameData;
+                
+                // Add attributes
+                for (const auto &attr : entity.DAttributes) {
+                    output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                }
                 output += ">";
-            } else {
-                output += ">" + EscapeString(entity.DContent);
-            }
-        }
-        else if (entity.DType == SXMLEntity::EType::EndElement) {
-            output = "</" + entity.DNameData + ">";
-        }
-        else if (entity.DType == SXMLEntity::EType::CharData) {
-            output = EscapeString(entity.DNameData);
-        }
-        else if (entity.DType == SXMLEntity::EType::CompleteElement) {
-            output = "<" + entity.DNameData;
-            
-            // Add attributes
-            for (const auto &attr : entity.DAttributes) {
-                output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
-            }
-            
-            // Self-closing tag if no content
-            if (entity.DContent.empty()) {
+                break;
+                
+            case SXMLEntity::EType::EndElement:
+                output = "</" + entity.DNameData + ">";
+                break;
+                
+            case SXMLEntity::EType::CharData:
+                output = EscapeString(entity.DNameData);
+                break;
+                
+            case SXMLEntity::EType::CompleteElement:
+                output = "<" + entity.DNameData;
+                
+                // Add attributes
+                for (const auto &attr : entity.DAttributes) {
+                    output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                }
+                
+                // Self-closing tag
                 output += "/>";
-            } else {
-                output += ">" + EscapeString(entity.DContent) + "</" + entity.DNameData + ">";
-            }
+                break;
         }
         
         // Write the output to the data sink
@@ -79,7 +74,7 @@ struct CXMLWriter::SImplementation {
     }
     
     bool Flush() {
-        return DataSink->Flush();
+        return true; // No Flush() method in CDataSink
     }
 };
 
