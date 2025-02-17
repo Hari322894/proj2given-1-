@@ -37,21 +37,22 @@ struct CDSVReader::SImplementation {
             //creating an if statement to handle the quotes
             if (ch == '"') {
                 if (inQuotes) {
-                    // if there was a pending quote from the previous iteration then we treat it as an escaped quote
+                    // If there was a pending quote, we treat it as an escaped quote
                     if (pendingQuote) {
                         cell += '"'; // add escaped quote to the cell
                         pendingQuote = false; // reset
                     } else {
+                        // If this quote is closing the quoted section, toggle inQuotes
                         pendingQuote = true; // use this quote as pending for the next iteration
                     }
                 } else {
-                    // starting a quoted section
+                    // Starting a quoted section
                     inQuotes = true;
                     pendingQuote = false; // clear any previous pending quote
                 }
             } else {
                 if (pendingQuote) {
-                    // if the previous character was a quote and no second quote followed, end the quoted section
+                    // If the previous character was a quote and no second quote followed, end the quoted section
                     inQuotes = false;
                     pendingQuote = false;
                 }
@@ -73,11 +74,6 @@ struct CDSVReader::SImplementation {
                         if (DataSource->Get(nextChar) && nextChar == '\n') {
                             // If the next character is a \n, this indicates
                             // \r\n. We can simply skip over it as the row has been handled.
-                        } else {
-                            // If it's not a \n after a \r, just continue reading normally.
-                            // In this case, we don't need to "unget" anything.
-                            row.push_back(cell); // Add current cell
-                            cell.clear(); // Clear for the next value
                         }
                     }
                     return true; // End of row has been reached when returning true
