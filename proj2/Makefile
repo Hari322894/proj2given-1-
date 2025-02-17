@@ -9,28 +9,22 @@ TEST_DIR = testsrc
 OBJ_DIR = obj
 BIN_DIR = bin
 
-# Source and test files
+# Source files
 SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp)
 TEST_FILES = $(wildcard $(TEST_DIR)/*.cpp)
 
-# Object files for source and test files
+# Object files
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC_FILES))
 TEST_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(TEST_FILES))
 
-# Targets
-TEST_BINARY = $(BIN_DIR)/testproj2
-DRIVER_BINARY = $(BIN_DIR)/driver
+# Output binary
+TARGET = $(BIN_DIR)/testproj2
 
-# Default target: build everything
-all: $(TEST_BINARY) $(DRIVER_BINARY)
+# Default target
+all: $(TARGET)
 
-# Rule to build the test binary
-$(TEST_BINARY): $(OBJ_FILES) $(TEST_OBJ_FILES)
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
-
-# Rule to build the driver binary
-$(DRIVER_BINARY): $(OBJ_FILES) driver.cpp
+# Rule to build the final binary
+$(TARGET): $(OBJ_FILES) $(TEST_OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
