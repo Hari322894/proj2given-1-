@@ -1,5 +1,6 @@
 #include "DSVReader.h"
 #include <sstream>
+#include <iostream>
 
 struct CDSVReader::SImplementation {
     std::shared_ptr<CDataSource> DataSource;
@@ -14,7 +15,7 @@ struct CDSVReader::SImplementation {
         char ch;
         bool inQuotes = false;
         bool hasData = false;
-        bool preserveQuotes = false;  // NEW: Track if quotes should be kept
+        bool preserveQuotes = false;  // Track if field was fully quoted
 
         while (!DataSource->End()) {
             if (!DataSource->Get(ch)) return false;
@@ -26,42 +27,43 @@ struct CDSVReader::SImplementation {
                     if (!DataSource->End()) {
                         char nextChar;
                         if (DataSource->Get(nextChar) && nextChar == '"') {
-                            // Escaped quote, add it
-                            cell += '"';
+                            cell += '"';  // Escaped quote, add it
                         } else {
-                            // End of quoted section
-                            inQuotes = false;
+                            inQuotes = false; // End of quoted section
                             if (nextChar == Delimiter) {
-                                row.push_back(cell);
+                                row.push_back("\"" + cell + "\""); // Preserve full quotes
                                 cell.clear();
                             } else if (nextChar == '\n' || nextChar == '\r') {
-                                row.push_back(cell);
+                                row.push_back("\"" + cell + "\"");
                                 return true;
-                            } else if (!DataSource->End()) {
-                                // Preserve quotes in output if necessary
+                            } else {
                                 preserveQuotes = true;
                                 cell += nextChar;
                             }
                         }
                     }
                 } else {
-                    // Starting a quoted section
                     inQuotes = true;
                     preserveQuotes = true;
                 }
             } else if (ch == Delimiter && !inQuotes) {
-                // Outside quotes, delimiter means end of cell
-                row.push_back(cell);
+                if (preserveQuotes) {
+                    row.push_back("\"" + cell + "\"");
+                } else {
+                    row.push_back(cell);
+                }
                 cell.clear();
                 preserveQuotes = false;
             } else if ((ch == '\n' || ch == '\r') && !inQuotes) {
-                // Newline outside quotes means end of row
                 if (!cell.empty() || !row.empty()) {
-                    row.push_back(cell);
+                    if (preserveQuotes) {
+                        row.push_back("\"" + cell + "\"");
+                    } else {
+                        row.push_back(cell);
+                    }
                 }
                 return true;
             } else {
-                // Regular character, add to cell
                 cell += ch;
             }
         }
@@ -69,9 +71,10 @@ struct CDSVReader::SImplementation {
         // Add the last cell if there was any data
         if (!cell.empty() || hasData) {
             if (preserveQuotes) {
-                cell = "\"" + cell + "\"";  // NEW: Preserve quotes in the output
+                row.push_back("\"" + cell + "\"");
+            } else {
+                row.push_back(cell);
             }
-            row.push_back(cell);
         }
 
         return hasData;
