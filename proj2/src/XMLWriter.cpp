@@ -52,9 +52,7 @@ struct CXMLWriter::SImplementation {
                 break;
             case SXMLEntity::EType::EndElement:
                 IndentationLevel--;
-                if (PreviousWasEndElement) {
-                    output += std::string(IndentationLevel, '\t');
-                } else {
+                if (!PreviousWasEndElement) {
                     output += "\n" + std::string(IndentationLevel, '\t');
                 }
                 output += "</" + entity.DNameData + ">";
