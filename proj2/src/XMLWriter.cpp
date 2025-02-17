@@ -3,7 +3,6 @@
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
-    bool StartTagWritten = false;
     
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
     
@@ -27,24 +26,23 @@ struct CXMLWriter::SImplementation {
         
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                if (!StartTagWritten && entity.DNameData == "osm") {
-                    output = "<" + entity.DNameData;
-                    for (const auto &attr : entity.DAttributes) {
-                        output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
-                    }
-                    output += ">\n\n\t\t";
-                    StartTagWritten = true;
-                } else {
-                    output = "<" + entity.DNameData;
-                    for (const auto &attr : entity.DAttributes) {
-                        output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
-                    }
-                    output += ">";
+                output = "<" + entity.DNameData;
+                for (const auto &attr : entity.DAttributes) {
+                    output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                }
+                output += ">";
+                // Only add newline for osm start tag
+                if (entity.DNameData == "osm") {
+                    output += "\n";
                 }
                 break;
                 
             case SXMLEntity::EType::EndElement:
-                output = "</" + entity.DNameData + ">";
+                if (entity.DNameData == "osm") {
+                    output = "\n</osm>";
+                } else {
+                    output = "</" + entity.DNameData + ">";
+                }
                 break;
                 
             case SXMLEntity::EType::CharData:
@@ -52,12 +50,12 @@ struct CXMLWriter::SImplementation {
                 break;
                 
             case SXMLEntity::EType::CompleteElement:
-                if (StartTagWritten && entity.DNameData == "node") {
-                    output = "<" + entity.DNameData;
+                if (entity.DNameData == "node") {
+                    output = "\t<" + entity.DNameData;
                     for (const auto &attr : entity.DAttributes) {
                         output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                     }
-                    output += "/>\n\n\t\t";
+                    output += "/>\n";
                 } else {
                     output = "<" + entity.DNameData;
                     for (const auto &attr : entity.DAttributes) {
