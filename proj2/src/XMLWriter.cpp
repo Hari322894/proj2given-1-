@@ -3,6 +3,7 @@
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
+    bool IsOSMStarted = false;
     
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
     
@@ -30,16 +31,18 @@ struct CXMLWriter::SImplementation {
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                output += ">";
-                // Only add newline for osm start tag
                 if (entity.DNameData == "osm") {
-                    output += "\n";
+                    IsOSMStarted = true;
+                    output += ">\n";
+                } else {
+                    output += ">";
                 }
                 break;
                 
             case SXMLEntity::EType::EndElement:
                 if (entity.DNameData == "osm") {
                     output = "\n</osm>";
+                    IsOSMStarted = false;
                 } else {
                     output = "</" + entity.DNameData + ">";
                 }
@@ -50,12 +53,12 @@ struct CXMLWriter::SImplementation {
                 break;
                 
             case SXMLEntity::EType::CompleteElement:
-                if (entity.DNameData == "node") {
-                    output = "\t<" + entity.DNameData;
+                if (IsOSMStarted && entity.DNameData == "node") {
+                    output = "\n\t\t<" + entity.DNameData;
                     for (const auto &attr : entity.DAttributes) {
                         output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                     }
-                    output += "/>\n";
+                    output += "/>";
                 } else {
                     output = "<" + entity.DNameData;
                     for (const auto &attr : entity.DAttributes) {
