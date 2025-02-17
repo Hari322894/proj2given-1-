@@ -1,12 +1,12 @@
 #include "XMLWriter.h"
-#include <sstream>
+#include <memory>
 #include <unordered_map>
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
     int IndentationLevel = 0;
-    bool PrettyPrint = true; // Ensures correct formatting with newlines and tabs
-
+    bool PrettyPrint = true;
+    
     const std::unordered_map<char, std::string> EscapeMap = {
         {'&', "&amp;"},
         {'"', "&quot;"},
@@ -14,9 +14,9 @@ struct CXMLWriter::SImplementation {
         {'<', "&lt;"},
         {'>', "&gt;"}
     };
-
+    
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
-
+    
     std::string EscapeString(const std::string &str) {
         std::string result;
         result.reserve(str.size() * 2);
@@ -26,19 +26,24 @@ struct CXMLWriter::SImplementation {
         }
         return result;
     }
-
+    
     std::string GetIndentation() {
         return PrettyPrint ? std::string(IndentationLevel, '\t') : "";
     }
-
+    
     bool WriteEntity(const SXMLEntity &entity) {
         std::string output;
-    
-        // Do not indent CharData
+        
+        // Add newline before elements except for the first one
+        if (PrettyPrint && entity.DType != SXMLEntity::EType::CharData && IndentationLevel > 0) {
+            output += "\n";
+        }
+        
+        // Add indentation for all types except CharData
         if (PrettyPrint && entity.DType != SXMLEntity::EType::CharData) {
             output += GetIndentation();
         }
-    
+        
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
                 output += "<" + entity.DNameData;
@@ -50,20 +55,18 @@ struct CXMLWriter::SImplementation {
                     IndentationLevel++;
                 }
                 break;
-    
+                
             case SXMLEntity::EType::EndElement:
-                IndentationLevel--;
                 if (PrettyPrint) {
-                    output = GetIndentation() + "</" + entity.DNameData + ">";
-                } else {
-                    output += "</" + entity.DNameData + ">";
+                    IndentationLevel--;
                 }
+                output += "</" + entity.DNameData + ">";
                 break;
-    
+                
             case SXMLEntity::EType::CharData:
                 output += EscapeString(entity.DNameData);
                 break;
-    
+                
             case SXMLEntity::EType::CompleteElement:
                 output += "<" + entity.DNameData;
                 for (const auto &attr : entity.DAttributes) {
@@ -72,18 +75,19 @@ struct CXMLWriter::SImplementation {
                 output += "/>";
                 break;
         }
-    
-        // Only add newline for StartElement and EndElement (not for CompleteElement)
-        if (PrettyPrint && entity.DType != SXMLEntity::EType::CompleteElement) {
+        
+        // Add newline after elements except CharData and CompleteElement
+        if (PrettyPrint && 
+            entity.DType != SXMLEntity::EType::CharData && 
+            entity.DType != SXMLEntity::EType::CompleteElement) {
             output += "\n";
         }
-    
-        return DataSink->Write(std::vector<char>(output.begin(), output.end()));
+        
+        return DataSink->Write(std::vector<uint8_t>(output.begin(), output.end()));
     }
     
-
     bool Flush() {
-        return true; // No special flushing required for CDataSink
+        return true;
     }
 };
 
