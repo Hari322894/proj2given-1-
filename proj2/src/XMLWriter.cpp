@@ -40,7 +40,7 @@ struct CXMLWriter::SImplementation {
             case SXMLEntity::EType::StartElement: {
                 output = "<" + entity.DNameData;
                 
-                // Add attributes in sorted order
+                // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
@@ -53,14 +53,13 @@ struct CXMLWriter::SImplementation {
                 break;
                 
             case SXMLEntity::EType::CharData:
-                // Preserve exact character data including whitespace
-                output = EscapeString(entity.DNameData);
+                output = entity.DNameData; // Don't escape CharData for whitespace preservation
                 break;
                 
             case SXMLEntity::EType::CompleteElement: {
                 output = "<" + entity.DNameData;
                 
-                // Add attributes in sorted order
+                // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
@@ -71,7 +70,7 @@ struct CXMLWriter::SImplementation {
             }
         }
         
-        // Write the exact output to the data sink
+        // Write the output to the data sink
         std::vector<char> outputChars(output.begin(), output.end());
         return DataSink->Write(outputChars);
     }
