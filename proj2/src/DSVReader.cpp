@@ -8,27 +8,33 @@ struct CDSVReader::SImplementation {
     SImplementation(std::shared_ptr<CDataSource> src, char delimiter)
         : DataSource(std::move(src)), Delimiter(delimiter) {}
 
-    bool ReadRow(std::vector<std::string> &row) {
-        row.clear();
-        std::string cell;
-        char ch;
-        bool inQuotes = false;
-
-        while (!DataSource->End()) {
-            if (!DataSource->Get(ch)) return false;
-
-            if (ch == Delimiter && !inQuotes) {
-                row.push_back(cell);
-                cell.clear();
-            } else if (ch == '"') {
-                inQuotes = !inQuotes;
-            } else {
-                cell += ch;
+        bool ReadRow(std::vector<std::string> &row) {
+            row.clear();
+            std::string cell;
+            char ch;
+            bool inQuotes = false;
+        
+            while (!DataSource->End()) {
+                if (!DataSource->Get(ch)) return false;
+        
+                if (ch == '"') {
+                    inQuotes = !inQuotes;  // Toggle quote mode
+                } else if (ch == Delimiter && !inQuotes) {
+                    row.push_back(cell);  // Push cell when delimiter is hit outside quotes
+                    cell.clear();
+                } else {
+                    cell += ch;
+                }
             }
+        
+            // Add the last cell
+            if (!cell.empty() || !row.empty()) {
+                row.push_back(cell);
+            }
+        
+            return true;
         }
-        if (!cell.empty() || !row.empty()) row.push_back(cell);
-        return true;
-    }
+        
 };
 
 CDSVReader::CDSVReader(std::shared_ptr<CDataSource> src, char delimiter)
