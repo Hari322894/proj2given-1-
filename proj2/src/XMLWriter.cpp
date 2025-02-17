@@ -68,82 +68,45 @@ struct CXMLWriter::SImplementation {
     
 
     bool WriteEntity(const SXMLEntity &entity) {
-
+        static int indentLevel = 0;  // Track indentation level
         std::string output;
-
-        
-
-        // Handle different entity types
-
+    
         switch (entity.DType) {
-
             case SXMLEntity::EType::StartElement:
-
-                output = "<" + entity.DNameData;
-
-                
-
+                output += std::string(indentLevel, '\t') + "<" + entity.DNameData;
+    
                 // Add attributes
-
                 for (const auto &attr : entity.DAttributes) {
-
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
-
                 }
-
-                output += ">";
-
+                output += ">\n";
+                ++indentLevel;  // Increase indentation level for nested elements
                 break;
-
-                
-
+    
             case SXMLEntity::EType::EndElement:
-
-                output = "</" + entity.DNameData + ">";
-
+                --indentLevel;  // Decrease indentation level for closing tag
+                output += std::string(indentLevel, '\t') + "</" + entity.DNameData + ">\n";
                 break;
-
-                
-
+    
             case SXMLEntity::EType::CharData:
-
-                output = EscapeString(entity.DNameData);
-
+                output += std::string(indentLevel, '\t') + EscapeString(entity.DNameData) + "\n";
                 break;
-
-                
-
+    
             case SXMLEntity::EType::CompleteElement:
-
-                output = "<" + entity.DNameData;
-
-                
-
+                output += std::string(indentLevel, '\t') + "<" + entity.DNameData;
+    
                 // Add attributes
-
                 for (const auto &attr : entity.DAttributes) {
-
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
-
                 }
-
-                
-
-                // Self-closing tag
-
-                output += "/>";
-
+                output += "/>\n";
                 break;
-
         }
-
-        
-
+    
         // Write the output to the data sink
-
         return DataSink->Write(std::vector<char>(output.begin(), output.end()));
-
     }
+    
 
     
 
