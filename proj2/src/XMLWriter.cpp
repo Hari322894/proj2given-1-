@@ -33,7 +33,7 @@ struct CXMLWriter::SImplementation {
                 }
                 if (entity.DNameData == "osm") {
                     IsOSMStarted = true;
-                    output += ">\n";
+                    output += ">\n\n\t";
                 } else {
                     output += ">";
                 }
@@ -41,7 +41,7 @@ struct CXMLWriter::SImplementation {
                 
             case SXMLEntity::EType::EndElement:
                 if (entity.DNameData == "osm") {
-                    output = "\n</osm>";
+                    output = "\n\n</osm>";
                     IsOSMStarted = false;
                 } else {
                     output = "</" + entity.DNameData + ">";
@@ -58,7 +58,7 @@ struct CXMLWriter::SImplementation {
                     for (const auto &attr : entity.DAttributes) {
                         output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                     }
-                    output += "/>";
+                    output += "/>\n\t";
                 } else {
                     output = "<" + entity.DNameData;
                     for (const auto &attr : entity.DAttributes) {
