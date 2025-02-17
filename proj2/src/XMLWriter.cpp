@@ -31,9 +31,9 @@ struct CXMLWriter::SImplementation {
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                // Add double newline after opening osm tag
+                // Add triple newline after opening osm tag
                 if (entity.DNameData == "osm") {
-                    output += ">\n\n";
+                    output += ">\n\n\n";
                 } else {
                     output += ">";
                 }
@@ -48,11 +48,11 @@ struct CXMLWriter::SImplementation {
                 output = EscapeString(entity.DNameData);
                 break;
             case SXMLEntity::EType::CompleteElement:
-                output = "\t\t<" + entity.DNameData;  // Double tab indentation
+                output = "\t\t\t<" + entity.DNameData;  // Triple tab indentation
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                output += "/>\n\n";  // Double newline after each complete element
+                output += "/>\n\n\n";  // Triple newline after each complete element
                 break;
         }
         return DataSink->Write(std::vector<char>(output.begin(), output.end()));
