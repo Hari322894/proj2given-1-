@@ -3,8 +3,9 @@
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
+    int IndentLevel;
 
-    SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
+    SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)), IndentLevel(0) {}
 
     // Helper function to escape special XML characters
     std::string EscapeString(const std::string &str) {
@@ -35,32 +36,38 @@ struct CXMLWriter::SImplementation {
         return result;
     }
 
+    std::string GetIndentation() const {
+        return std::string(IndentLevel, '\t'); // Use tab characters for indentation
+    }
+
     bool WriteEntity(const SXMLEntity &entity) {
         std::string output;
         // Handle different entity types
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                output = "<" + entity.DNameData;
+                output = GetIndentation() + "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                output += ">";
+                output += ">\n";
+                IndentLevel++;
                 break;
             case SXMLEntity::EType::EndElement:
-                output = "</" + entity.DNameData + ">";
+                IndentLevel--;
+                output = GetIndentation() + "</" + entity.DNameData + ">\n";
                 break;
             case SXMLEntity::EType::CharData:
-                output = EscapeString(entity.DNameData);
+                output = GetIndentation() + EscapeString(entity.DNameData) + "\n";
                 break;
             case SXMLEntity::EType::CompleteElement:
-                output = "<" + entity.DNameData;
+                output = GetIndentation() + "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 // Self-closing tag
-                output += "/>";
+                output += "/>\n";
                 break;
         }
         // Write the output to the data sink
