@@ -10,28 +10,19 @@ struct CDSVReader::SImplementation {
         : DataSource(std::move(src)), Delimiter(delimiter) {}
 
         bool ReadRow(std::vector<std::string> &row) {
-
             row.clear();
-        
+            
             std::string cell;
-        
             char ch;
-        
             bool inQuotes = false;
-        
             bool hasData = false;
         
-        
             while (!DataSource->End()) {
-        
                 if (!DataSource->Get(ch)) return false;
-        
                 hasData = true;
         
                 if (ch == '"') {
-        
                     if (inQuotes) {
-        
                         // Check if the next character is another quote (escaped quote)
                         if (!DataSource->End()) {
                             char nextChar;
@@ -55,12 +46,10 @@ struct CDSVReader::SImplementation {
                                 }
                             }
                         }
-        
                     } else {
                         // Starting a quoted section
                         inQuotes = true;
                     }
-        
                 } else if (ch == Delimiter && !inQuotes) { 
                     // Outside quotes, delimiter means end of cell
                     row.push_back(cell);
@@ -76,10 +65,20 @@ struct CDSVReader::SImplementation {
                     cell += ch;
                 }
             }
+            
+            // If the cell has data and ends with a quote, remove the surrounding quotes
+            if (!cell.empty() && inQuotes) {
+                // Remove the leading and trailing quotes
+                if (cell.front() == '"' && cell.back() == '"') {
+                    cell = cell.substr(1, cell.size() - 2);
+                }
+            }
+        
             // Add the last cell if there was any data
             if (!cell.empty() || hasData) {
                 row.push_back(cell);
-            } 
+            }
+        
             return hasData;
         }        
 };
