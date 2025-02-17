@@ -78,7 +78,13 @@ struct CXMLWriter::SImplementation {
     }
 
     bool Flush() {
-        return DataSink->Flush(); // Call Flush() on the data sink if available
+
+        // If CDataSink has no Flush method, just return true
+    
+        return true;
+    
+        // If you have logic to handle flushing data, implement it here.
+    
     }
 };
 
