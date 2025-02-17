@@ -76,7 +76,8 @@ struct CXMLWriter::SImplementation {
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                output += ">\n\t";  // Added newline and tab
+                // Only add newline for osm tag
+                output += (entity.DNameData == "osm") ? ">\n\t" : ">";
                 break;
                 
             case SXMLEntity::EType::EndElement:
@@ -91,11 +92,19 @@ struct CXMLWriter::SImplementation {
                 break;
                 
             case SXMLEntity::EType::CompleteElement:
-                output = "\n\t<" + entity.DNameData;  // Added newline and tab
-                for (const auto &attr : entity.DAttributes) {
-                    output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                if (entity.DNameData == "node") {
+                    output = "<" + entity.DNameData;
+                    for (const auto &attr : entity.DAttributes) {
+                        output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                    }
+                    output += "/>\n\t";
+                } else {
+                    output = "<" + entity.DNameData;
+                    for (const auto &attr : entity.DAttributes) {
+                        output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
+                    }
+                    output += "/>";
                 }
-                output += "/>";
                 break;
         }
         
