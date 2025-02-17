@@ -38,9 +38,6 @@ struct CXMLWriter::SImplementation {
         // Handle different entity types
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                if (PreviousWasEndElement) {
-                    output += "\n";
-                }
                 output += std::string(IndentationLevel, '\t') + "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
@@ -52,8 +49,8 @@ struct CXMLWriter::SImplementation {
                 break;
             case SXMLEntity::EType::EndElement:
                 IndentationLevel--;
-                if (!PreviousWasEndElement) {
-                    output += "\n" + std::string(IndentationLevel, '\t');
+                if (PreviousWasEndElement) {
+                    output += std::string(IndentationLevel, '\t');
                 }
                 output += "</" + entity.DNameData + ">";
                 PreviousWasEndElement = true;
@@ -63,9 +60,6 @@ struct CXMLWriter::SImplementation {
                 PreviousWasEndElement = false;
                 break;
             case SXMLEntity::EType::CompleteElement:
-                if (PreviousWasEndElement) {
-                    output += "\n";
-                }
                 output += std::string(IndentationLevel, '\t') + "<" + entity.DNameData;
                 // Add attributes
                 for (const auto &attr : entity.DAttributes) {
