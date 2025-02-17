@@ -1,223 +1,88 @@
 #include "XMLReader.h"
-#include <sstream>
+#include <expat.h>
 #include <queue>
-#include <cctype>
-#include <unordered_map>
+#include <memory>
 
 struct CXMLReader::SImplementation {
     std::shared_ptr<CDataSource> DataSource;
-    std::queue<char> Buffer;
-    
-    const std::unordered_map<std::string, char> EntityMap = {
-        {"&amp;", '&'},
-        {"&quot;", '"'},
-        {"&apos;", '\''},
-        {"&lt;", '<'},
-        {"&gt;", '>'}
-    };
-    
-    SImplementation(std::shared_ptr<CDataSource> src) : DataSource(std::move(src)) {}
+    XML_Parser Parser;
+    std::queue<SXMLEntity> EntityQueue;
 
-    bool GetChar(char& ch) {
-        if (!Buffer.empty()) {
-            ch = Buffer.front();
-            Buffer.pop();
-            return true;
-        }
-        return DataSource->Get(ch);
-    }
-
-    void UngetChar(char ch) {
-        Buffer.push(ch);
-    }
-
-    void SkipWhitespace() {
-        char ch;
-        while (GetChar(ch)) {
-            if (!std::isspace(ch)) {
-                UngetChar(ch);
-                return;
-            }
-        }
-    }
-
-    std::string DecodeEntities(const std::string& input) {
-        std::string result;
-        size_t pos = 0;
-        
-        while (pos < input.length()) {
-            if (input[pos] == '&') {
-                bool found = false;
-                for (const auto& entity : EntityMap) {
-                    if (input.substr(pos, entity.first.length()) == entity.first) {
-                        result += entity.second;
-                        pos += entity.first.length();
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    result += input[pos++];
-                }
-            } else {
-                result += input[pos++];
-            }
-        }
-        return result;
-    }
-
-    std::string ReadTagName() {
-        std::string result;
-        char ch;
-        while (GetChar(ch)) {
-            if (std::isspace(ch) || ch == '>' || ch == '/' || ch == '=') {
-                UngetChar(ch);
-                break;
-            }
-            result += ch;
-        }
-        return result;
-    }
-
-    void ParseAttributes(SXMLEntity& entity) {
-        char ch;
-        while (true) {
-            SkipWhitespace();
-            if (!GetChar(ch)) {
-                break;
-            }
-    
-            if (ch == '>' || ch == '/') {
-                UngetChar(ch);
-                break;
-            }
-    
-            UngetChar(ch);
-            std::string attrName = ReadTagName();
-            if (attrName.empty()) {
-                break;
-            }
-    
-            SkipWhitespace();
-            if (!GetChar(ch) || ch != '=') {
-                UngetChar(ch);
-                entity.DAttributes.emplace_back(attrName, "");
-                continue;
-            }
-    
-            SkipWhitespace();
-            if (!GetChar(ch)) {
-                break;
-            }
-    
-            std::string attrValue;
-            if (ch == '"' || ch == '\'') {
-                char quote = ch;
-                while (GetChar(ch)) {
-                    if (ch == quote) break;
-                    attrValue += ch;
-                }
-            } else {
-                UngetChar(ch);
-                while (GetChar(ch) && !std::isspace(ch) && ch != '>' && ch != '/') {
-                    attrValue += ch;
-                }
-                if (ch == '>' || ch == '/') {
-                    UngetChar(ch);
-                }
-            }
-    
-            attrValue = DecodeEntities(attrValue);
-            entity.DAttributes.emplace_back(attrName, attrValue);
-        }
-    }
-    
-    
-    bool ReadEntity(SXMLEntity& entity, bool skipcdata) {
-        entity.DAttributes.clear();
-        entity.DNameData.clear();
-        
-        char ch;
-        SkipWhitespace();
-        
-        if (!GetChar(ch)) {
-            return false;
-        }
-    
-        if (ch != '<') {
-            std::string charData;
-            charData += ch;
-            while (GetChar(ch) && ch != '<') {
-                charData += ch;
-            }
-            if (ch == '<') {
-                UngetChar(ch);
-            }
-    
-            if (skipcdata) {
-                return ReadEntity(entity, skipcdata);
-            }
-    
-            entity.DType = SXMLEntity::EType::CharData;
-            entity.DNameData = DecodeEntities(charData);
-            return true;
-        }
-    
-        if (!GetChar(ch)) {
-            return false;
-        }
-        
-        if (ch == '/') {
-            entity.DType = SXMLEntity::EType::EndElement;
-            entity.DNameData = ReadTagName();
-            while (GetChar(ch) && ch != '>') {}
-            return true;
-        }
-    
-        if (ch == '!') {
-            std::string specialTag;
-            for (int i = 0; i < 2; ++i) {
-                if (GetChar(ch)) {
-                    specialTag += ch;
-                }
-            }
-    
-            if (specialTag == "--") {
-                while (GetChar(ch) && !(ch == '-' && GetChar(ch) && ch == '-' && GetChar(ch) && ch == '>')) {}
-                return ReadEntity(entity, skipcdata);
-            }
-    
-            while (GetChar(ch) && ch != '>') {}
-            return ReadEntity(entity, skipcdata);
-        }
-    
-        if (ch == '?') {
-            while (GetChar(ch) && !(ch == '?' && GetChar(ch) && ch == '>')) {}
-            return ReadEntity(entity, skipcdata);
-        }
-    
-        UngetChar(ch);
+    static void StartElementHandler(void *userData, const char *name, const char **atts) {
+        auto *impl = static_cast<SImplementation *>(userData);
+        SXMLEntity entity;
         entity.DType = SXMLEntity::EType::StartElement;
-        entity.DNameData = ReadTagName();
-        ParseAttributes(entity);
-    
-        if (!GetChar(ch)) {
+        entity.DNameData = name;
+
+        // Parse attributes
+        for (int i = 0; atts[i]; i += 2) {
+            entity.DAttributes.emplace_back(atts[i], atts[i + 1]);
+        }
+
+        impl->EntityQueue.push(entity);
+    }
+
+    static void EndElementHandler(void *userData, const char *name) {
+        auto *impl = static_cast<SImplementation *>(userData);
+        SXMLEntity entity;
+        entity.DType = SXMLEntity::EType::EndElement;
+        entity.DNameData = name;
+        impl->EntityQueue.push(entity);
+    }
+
+    static void CharDataHandler(void *userData, const char *s, int len) {
+        auto *impl = static_cast<SImplementation *>(userData);
+        std::string text(s, len);
+
+        if (!text.empty()) {
+            SXMLEntity entity;
+            entity.DType = SXMLEntity::EType::CharData;
+            entity.DNameData = text;
+            impl->EntityQueue.push(entity);
+        }
+    }
+
+    SImplementation(std::shared_ptr<CDataSource> src) : DataSource(std::move(src)) {
+        Parser = XML_ParserCreate(nullptr);
+        XML_SetUserData(Parser, this);
+        XML_SetElementHandler(Parser, StartElementHandler, EndElementHandler);
+        XML_SetCharacterDataHandler(Parser, CharDataHandler);
+    }
+
+    ~SImplementation() {
+        XML_ParserFree(Parser);
+    }
+
+    bool ReadEntity(SXMLEntity &entity, bool skipcdata) {
+        if (!EntityQueue.empty()) {
+            entity = EntityQueue.front();
+            EntityQueue.pop();
+            return true;
+        }
+
+        char buffer[4096];
+        size_t length = DataSource->Read(buffer, sizeof(buffer));
+
+        if (length == 0) {
             return false;
         }
-    
-        if (ch == '/') {
-            entity.DType = SXMLEntity::EType::CompleteElement;
-            GetChar(ch);  // Consume '>'
-        } else if (ch != '>') {
-            UngetChar(ch);
+
+        if (XML_Parse(Parser, buffer, length, length == 0) == XML_STATUS_ERROR) {
+            return false;
         }
-    
-        return true;
+
+        if (!EntityQueue.empty()) {
+            entity = EntityQueue.front();
+            EntityQueue.pop();
+            return true;
+        }
+
+        return false;
     }
 };
 
 CXMLReader::CXMLReader(std::shared_ptr<CDataSource> src)
-    : DImplementation(std::make_unique<SImplementation>(src)) {}
+    : DImplementation(std::make_unique<SImplementation>(std::move(src))) {}
 
 CXMLReader::~CXMLReader() = default;
 
@@ -225,6 +90,6 @@ bool CXMLReader::End() const {
     return DImplementation->DataSource->End();
 }
 
-bool CXMLReader::ReadEntity(SXMLEntity& entity, bool skipcdata) {
+bool CXMLReader::ReadEntity(SXMLEntity &entity, bool skipcdata) {
     return DImplementation->ReadEntity(entity, skipcdata);
 }
