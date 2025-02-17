@@ -21,17 +21,23 @@ struct CDSVReader::SImplementation {
 
             if (ch == '"') {
                 if (inQuotes) {
-                    // Check if the next character is another quote
+                    // Check if the next character is another quote (escaped quote)
                     if (!DataSource->End()) {
                         char nextChar;
                         if (DataSource->Get(nextChar) && nextChar == '"') {
-                            // Escaped quote, add a single quote
+                            // Escaped quote, add it
                             cell += '"';
                         } else {
                             // End of quoted section
                             inQuotes = false;
-                            if (nextChar != Delimiter && !DataSource->End()) {
-                                // The next character is not the delimiter, add it to the cell
+                            if (nextChar == Delimiter) {
+                                row.push_back(cell);
+                                cell.clear();
+                            } else if (nextChar == '\n' || nextChar == '\r') {
+                                row.push_back(cell);
+                                return true;
+                            } else if (!DataSource->End()) {
+                                // Unexpected character after closing quote
                                 cell += nextChar;
                             }
                         }
@@ -41,11 +47,17 @@ struct CDSVReader::SImplementation {
                     inQuotes = true;
                 }
             } else if (ch == Delimiter && !inQuotes) {
-                // Add the cell to the row when hitting a delimiter outside quotes
+                // Outside quotes, delimiter means end of cell
                 row.push_back(cell);
                 cell.clear();
+            } else if ((ch == '\n' || ch == '\r') && !inQuotes) {
+                // Newline outside quotes means end of row
+                if (!cell.empty() || !row.empty()) {
+                    row.push_back(cell);
+                }
+                return true;
             } else {
-                // Regular character, just add to the cell
+                // Regular character, add to cell
                 cell += ch;
             }
         }
