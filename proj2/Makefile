@@ -17,7 +17,7 @@ TEST_FILES = $(wildcard $(TEST_DIR)/*.cpp)
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
 # Test object files - separate into GTest and standalone tests
-GTEST_FILES = $(TEST_DIR)/StringUtilsTest.cpp $(TEST_DIR)/StringDataSourceTest.cpp $(TEST_DIR)/StringDataTest.cpp
+GTEST_FILES = $(TEST_DIR)/StringUtilsTest.cpp $(TEST_DIR)/StringDataSourceTest.cpp $(TEST_DIR)/StringDataSinkTest.cpp
 STANDALONE_FILES = $(TEST_DIR)/XMLtest.cpp $(TEST_DIR)/DSVtest.cpp
 
 GTEST_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(GTEST_FILES))
