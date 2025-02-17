@@ -2,9 +2,9 @@
 #include "XMLWriter.h"
 #include "StringDataSource.h"
 #include "StringDataSink.h"
-#include <iostream>
+#include <gtest/gtest.h>
 
-int main() {
+TEST(XMLTest, BasicReadWrite) {
     std::shared_ptr<CStringDataSource> src = std::make_shared<CStringDataSource>("<tag>data</tag>");
     std::shared_ptr<CStringDataSink> sink = std::make_shared<CStringDataSink>();
 
@@ -18,6 +18,7 @@ int main() {
         }
     }
 
-    std::cout << "Written XML: " << sink->String() << std::endl;
-    return 0;
+    EXPECT_EQ(sink->String(), "<tag>data</tag>"); 
 }
+
+

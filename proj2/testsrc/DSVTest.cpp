@@ -2,9 +2,9 @@
 #include "DSVWriter.h"
 #include "StringDataSource.h"
 #include "StringDataSink.h"
-#include <iostream>
+#include <gtest/gtest.h>
 
-int main() {
+TEST(DSVTest, BasicReadWrite) {
     std::shared_ptr<CStringDataSource> src = std::make_shared<CStringDataSource>("a,b,c\n1,2,3\n");
     std::shared_ptr<CStringDataSink> sink = std::make_shared<CStringDataSink>();
 
@@ -18,6 +18,5 @@ int main() {
         }
     }
 
-    std::cout << "Written data: " << sink->String() << std::endl;
-    return 0;
+    EXPECT_EQ(sink->String(), "a,b,c\n1,2,3\n"); 
 }
