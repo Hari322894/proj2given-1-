@@ -76,7 +76,6 @@ struct CXMLWriter::SImplementation {
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
-                // Only add newline for osm tag
                 output += (entity.DNameData == "osm") ? ">\n\t" : ">";
                 break;
                 
@@ -97,7 +96,7 @@ struct CXMLWriter::SImplementation {
                     for (const auto &attr : entity.DAttributes) {
                         output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                     }
-                    output += "/>\n\t";
+                    output += "/>\n\t";  // Add newline after node
                 } else {
                     output = "<" + entity.DNameData;
                     for (const auto &attr : entity.DAttributes) {
