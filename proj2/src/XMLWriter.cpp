@@ -4,8 +4,9 @@
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
-    bool HasRootElement = false;
-    
+    bool isFirstElement = true;  // Added to track first element
+   
+    // Special character map for XML escaping
     const std::unordered_map<char, std::string> EscapeMap = {
         {'&', "&amp;"},
         {'"', "&quot;"},
@@ -13,13 +14,14 @@ struct CXMLWriter::SImplementation {
         {'<', "&lt;"},
         {'>', "&gt;"}
     };
-    
+   
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
-    
+   
+    // Helper function to escape special XML characters
     std::string EscapeString(const std::string &str) {
         std::string result;
-        result.reserve(str.size() * 2);
-        
+        result.reserve(str.size() * 2); // Reserve extra space for potential escapes
+       
         for (char c : str) {
             auto it = EscapeMap.find(c);
             if (it != EscapeMap.end()) {
@@ -28,60 +30,64 @@ struct CXMLWriter::SImplementation {
                 result += c;
             }
         }
+       
         return result;
     }
-    
+   
     bool WriteEntity(const SXMLEntity &entity) {
         std::string output;
-        
+
+        // Add newline and tab for non-first elements
+        if (!isFirstElement && entity.DType != SXMLEntity::EType::EndElement) {
+            if (!DataSink->Write(std::vector<char>{'\n', '\t'})) {
+                return false;
+            }
+        }
+       
+        // Handle different entity types
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
-                if (!HasRootElement) {
-                    HasRootElement = true;
-                    output = "<" + entity.DNameData;
-                } else {
-                    output = "\n\t\n\t<" + entity.DNameData;  // Double newline before node
-                }
-                
+                output = "<" + entity.DNameData;
+               
+                // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += ">";
                 break;
-                
+               
             case SXMLEntity::EType::EndElement:
-                if (entity.DNameData != "osm") {  // Skip osm closing tag
-                    output = "</" + entity.DNameData + ">";
-                }
+                output = "</" + entity.DNameData + ">";
                 break;
-                
+               
             case SXMLEntity::EType::CharData:
                 output = EscapeString(entity.DNameData);
                 break;
-                
+               
             case SXMLEntity::EType::CompleteElement:
-                if (!HasRootElement) {
-                    HasRootElement = true;
-                    output = "<" + entity.DNameData;
-                } else {
-                    output = "\n\t\n\t<" + entity.DNameData;  // Double newline before node
-                }
-                
+                output = "<" + entity.DNameData;
+               
+                // Add attributes
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
+               
+                // Self-closing tag
                 output += "/>";
                 break;
         }
-        
-        if (!output.empty()) {
-            return DataSink->Write(std::vector<char>(output.begin(), output.end()));
+       
+        // Update first element flag
+        if (isFirstElement) {
+            isFirstElement = false;
         }
-        return true;
+
+        // Write the output to the data sink
+        return DataSink->Write(std::vector<char>(output.begin(), output.end()));
     }
-    
+   
     bool Flush() {
-        return true;
+        return true; // No Flush() method in CDataSink
     }
 };
 
