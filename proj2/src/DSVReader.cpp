@@ -72,7 +72,9 @@ struct CDSVReader::SImplementation {
         // If the next character is a \n, this indicates
         // \r\n. Consume the '\n' to avoid
         // treating it as the start of a new row.
-            }
+            }else{
+            DataSource->Unget();
+        }
         }
         return true;
         //end of row has been reached when returning true
