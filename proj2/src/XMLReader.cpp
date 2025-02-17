@@ -64,7 +64,15 @@ struct CXMLReader::SImplementation {
     bool ReadEntity(SXMLEntity &entity, bool skipcdata) {
         while (EntityQueue.empty() && !EndOfData) {
             std::vector<char> buffer(4096); // Use vector instead of char array
-            size_t length = DataSource->Read(buffer, buffer.size());
+            size_t length = 0;
+            while (length < buffer.size() && !DataSource->End()) {
+                char ch;
+                if (DataSource->Get(ch)) {
+                    buffer[length++] = ch;
+                } else {
+                    break;
+                }
+            }
 
             if (length == 0) {
                 // No more data to read
