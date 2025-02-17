@@ -21,7 +21,6 @@ struct CXMLReader::SImplementation {
         Buffer.push(ch);
     }
 
-    // Skip whitespace characters
     void SkipWhitespace() {
         char ch;
         while (GetChar(ch)) {
@@ -32,7 +31,6 @@ struct CXMLReader::SImplementation {
         }
     }
 
-    // Read until the specified character is found
     std::string ReadUntil(char stopChar, bool includeStop = false) {
         std::string result;
         char ch;
@@ -50,7 +48,6 @@ struct CXMLReader::SImplementation {
         return result;
     }
 
-    // Parse attributes of an XML element
     void ParseAttributes(SXMLEntity& entity) {
         char ch;
         while (GetChar(ch)) {
@@ -77,7 +74,8 @@ struct CXMLReader::SImplementation {
             std::string attrValue = ReadUntil(quote);
             GetChar(ch); // consume closing quote
             
-            entity.DAttributes[attrName] = attrValue;
+            // Add attribute as a pair to the vector
+            entity.DAttributes.push_back(std::make_pair(attrName, attrValue));
         }
     }
 
