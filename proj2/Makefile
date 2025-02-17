@@ -1,39 +1,70 @@
+# Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -Werror -g -Iinclude
+CXXFLAGS = -std=c++17 -Wall -Iinclude
+LDFLAGS = -lgtest -lgtest_main -pthread
 
-SRC = src/DSVReader.cpp src/DSVWriter.cpp src/StringDataSink.cpp \
-      src/StringDataSource.cpp src/StringUtils.cpp src/XMLReader.cpp src/XMLWriter.cpp
+# Directories
+SRC_DIR = src
+TEST_DIR = testsrc
+OBJ_DIR = obj
+BIN_DIR = bin
 
-TEST_SRC = testsrc/DSVTest.cpp testsrc/StringDataSinkTest.cpp \
-           testsrc/StringDataSourceTest.cpp testsrc/StringUtilsTest.cpp testsrc/XMLTest.cpp
+# Source files
+SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp)
+TEST_FILES = $(wildcard $(TEST_DIR)/*.cpp)
 
-OBJS = $(SRC:.cpp=.o)
-TEST_OBJS = $(TEST_SRC:.cpp=.o)
-HEADERS = include/DataSink.h include/DataSource.h include/DSVReader.h include/DSVWriter.h \
-          include/StringDataSink.h include/StringDataSource.h include/StringUtils.h \
-          include/XMLEntity.h include/XMLReader.h include/XMLWriter.h
+# Object files
+OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
-TARGET = parser_app
-TEST_TARGET = test_runner
+# Test object files - separate into GTest and standalone tests
+GTEST_FILES = $(TEST_DIR)/StringUtilsTest.cpp $(TEST_DIR)/StringDataSourceTest.cpp $(TEST_DIR)/StringDataTest.cpp
+STANDALONE_FILES = $(TEST_DIR)/XMLtest.cpp $(TEST_DIR)/DSVtest.cpp
 
-all: $(TARGET) $(TEST_TARGET)
+GTEST_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(GTEST_FILES))
+STANDALONE_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(STANDALONE_FILES))
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+# Output binaries
+GTEST_TARGET = $(BIN_DIR)/runtests
+XML_TARGET = $(BIN_DIR)/xmltest
+DSV_TARGET = $(BIN_DIR)/dsvtest
 
-$(TEST_TARGET): $(TEST_OBJS) $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+# Default target
+all: $(GTEST_TARGET) $(XML_TARGET) $(DSV_TARGET)
 
-%.o: %.cpp $(HEADERS)
+# Rule to build the Google Test binary
+$(GTEST_TARGET): $(OBJ_FILES) $(GTEST_OBJ_FILES)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+
+# Rule to build the XML test binary
+$(XML_TARGET): $(OBJ_DIR)/XMLtest.o $(OBJ_FILES)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+# Rule to build the DSV test binary
+$(DSV_TARGET): $(OBJ_DIR)/DSVtest.o $(OBJ_FILES)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+# Rule to compile source files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+# Rule to compile test files
+$(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
+	@mkdir -p $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Clean build artifacts
 clean:
-	rm -f $(OBJS) $(TEST_OBJS) $(TARGET) $(TEST_TARGET)
+	rm -rf $(OBJ_DIR) $(BIN_DIR)
 
-run: $(TARGET)
-	./$(TARGET)
+# Run all tests
+test: all
+	./$(GTEST_TARGET)
+	./$(XML_TARGET)
+	./$(DSV_TARGET)
 
-test: $(TEST_TARGET)
-	./$(TEST_TARGET)
-
-.PHONY: all clean run test
+# Phony targets
+.PHONY: all clean test
