@@ -2,12 +2,12 @@
 #include <vector>
 #include <string>
 
-class XMLWriter {
+class CXMLWriter {
 private:
     class Implementation {
     private:
-        std::shared_ptr<DataSink> dataSink;
-        std::vector<std::string> openElements;  // Using vector instead of stack
+        std::shared_ptr<CDataSink> dataSink;
+        std::vector<std::string> openElements;
 
         bool writeDirect(const std::string& str) {
             for (char c : str) {
@@ -48,11 +48,10 @@ private:
         }
 
     public:
-        explicit Implementation(std::shared_ptr<DataSink> sink) 
+        explicit Implementation(std::shared_ptr<CDataSink> sink) 
             : dataSink(std::move(sink)) {}
 
         bool flush() {
-            // Close tags in reverse order
             for (auto it = openElements.rbegin(); it != openElements.rend(); ++it) {
                 if (!writeDirect("</") ||
                     !writeDirect(*it) ||
@@ -64,21 +63,21 @@ private:
             return true;
         }
 
-        bool writeEntity(const XMLEntity& entity) {
-            switch (entity.type) {
-                case XMLEntity::Type::StartElement:
+        bool writeEntity(const SXMLEntity& entity) {
+            switch (entity.DType) {
+                case SXMLEntity::EType::StartElement:
                     if (!writeDirect("<") ||
-                        !writeDirect(entity.name) ||
-                        !writeAttributeList(entity.attributes) ||
+                        !writeDirect(entity.DNameData) ||
+                        !writeAttributeList(entity.DAttributes) ||
                         !writeDirect(">")) {
                         return false;
                     }
-                    openElements.push_back(entity.name);
+                    openElements.push_back(entity.DNameData);
                     return true;
 
-                case XMLEntity::Type::EndElement:
+                case SXMLEntity::EType::EndElement:
                     if (!writeDirect("</") ||
-                        !writeDirect(entity.name) ||
+                        !writeDirect(entity.DNameData) ||
                         !writeDirect(">")) {
                         return false;
                     }
@@ -87,37 +86,35 @@ private:
                     }
                     return true;
 
-                case XMLEntity::Type::CharData:
-                    return writeEscapedContent(entity.name);
+                case SXMLEntity::EType::CharData:
+                    return writeEscapedContent(entity.DNameData);
 
-                case XMLEntity::Type::CompleteElement:
+                case SXMLEntity::EType::CompleteElement:
                     if (!writeDirect("<") ||
-                        !writeDirect(entity.name) ||
-                        !writeAttributeList(entity.attributes) ||
+                        !writeDirect(entity.DNameData) ||
+                        !writeAttributeList(entity.DAttributes) ||
                         !writeDirect("/>")) {
                         return false;
                     }
                     return true;
-
-                default:
-                    return false;
             }
+            return false;
         }
     };
 
     std::unique_ptr<Implementation> impl;
 
 public:
-    explicit XMLWriter(std::shared_ptr<DataSink> sink)
+    explicit CXMLWriter(std::shared_ptr<CDataSink> sink)
         : impl(std::make_unique<Implementation>(std::move(sink))) {}
 
-    ~XMLWriter() = default;
+    ~CXMLWriter() = default;
 
-    bool flush() {
+    bool Flush() {
         return impl->flush();
     }
 
-    bool writeEntity(const XMLEntity& entity) {
+    bool WriteEntity(const SXMLEntity& entity) {
         return impl->writeEntity(entity);
     }
 };
