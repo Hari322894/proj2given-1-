@@ -14,7 +14,8 @@ struct CXMLWriter::SImplementation {
     };
     int IndentationLevel = 0;
     const std::string IndentationString = "\t";
-    bool NeedsIndentation = false;
+    std::string PendingIndentation;
+    bool IsLastEntityStartElement = false;
 
     SImplementation(std::shared_ptr<CDataSink> sink) : DataSink(std::move(sink)) {}
 
@@ -35,9 +36,9 @@ struct CXMLWriter::SImplementation {
 
     // Helper function to add indentation
     void AddIndentation(std::string &output) {
-        if (NeedsIndentation) {
-            output += "\n" + std::string(IndentationLevel, '\t');
-            NeedsIndentation = false;
+        if (!PendingIndentation.empty()) {
+            output += PendingIndentation;
+            PendingIndentation.clear();
         }
     }
 
@@ -45,6 +46,9 @@ struct CXMLWriter::SImplementation {
         std::string output;
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
+                if (IsLastEntityStartElement) {
+                    output += "\n";
+                }
                 AddIndentation(output);
                 output += "<" + entity.DNameData;
                 for (const auto &attr : entity.DAttributes) {
@@ -52,27 +56,33 @@ struct CXMLWriter::SImplementation {
                 }
                 output += ">";
                 IndentationLevel++;
-                NeedsIndentation = true;
+                PendingIndentation = "\n" + std::string(IndentationLevel, '\t');
+                IsLastEntityStartElement = true;
                 break;
             case SXMLEntity::EType::EndElement:
                 IndentationLevel--;
                 AddIndentation(output);
                 output += "</" + entity.DNameData + ">";
-                NeedsIndentation = true;
+                PendingIndentation = "\n" + std::string(IndentationLevel, '\t');
+                IsLastEntityStartElement = false;
                 break;
             case SXMLEntity::EType::CharData:
                 AddIndentation(output);
                 output += EscapeString(entity.DNameData);
-                NeedsIndentation = false;
+                IsLastEntityStartElement = false;
                 break;
             case SXMLEntity::EType::CompleteElement:
+                if (IsLastEntityStartElement) {
+                    output += "\n";
+                }
                 AddIndentation(output);
                 output += "<" + entity.DNameData;
                 for (const auto &attr : entity.DAttributes) {
                     output += " " + attr.first + "=\"" + EscapeString(attr.second) + "\"";
                 }
                 output += "/>";
-                NeedsIndentation = true;
+                PendingIndentation = "\n" + std::string(IndentationLevel, '\t');
+                IsLastEntityStartElement = false;
                 break;
         }
         return DataSink->Write(std::vector<char>(output.begin(), output.end()));
