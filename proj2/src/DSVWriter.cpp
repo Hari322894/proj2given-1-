@@ -43,4 +43,7 @@ CDSVWriter::CDSVWriter(std::shared_ptr<CDataSink> sink, char delimiter, bool quo
 
 CDSVWriter::~CDSVWriter() = default;
 
-bool CDSVWriter::WriteRow(const std::vector<std::string>& row) { return DImplementation->WriteRow(row); }
+bool CDSVWriter::WriteRow(const std::vector<std::string>& row)
+ { 
+    return DImplementation->WriteRow(row);
+ }

@@ -9,7 +9,8 @@ struct CXMLWriter::SImplementation {
     // Helper function to escape special XML characters
     std::string EscapeString(const std::string &str) {
         std::string result;
-        result.reserve(str.size() * 2); // Reserve extra space for potential escapes
+        result.reserve(str.size() * 2); 
+        // Reserve extra space for potential escapes
 
         for (char c : str) {
             switch (c) {
@@ -29,7 +30,8 @@ struct CXMLWriter::SImplementation {
                     result += "&gt;";
                     break;
                 default:
-                    result += c; // Add the character as is
+                    result += c; 
+                // Add the character as is
             }
         }
         return result;
