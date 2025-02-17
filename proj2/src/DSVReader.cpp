@@ -17,28 +17,33 @@ struct CDSVReader::SImplementation {
 
         while (!DataSource->End()) {
             if (!DataSource->Get(ch)) return false;
-
             hasData = true;
 
             if (ch == '"') {
-                // Handle escaped quotes (e.g., "My name is ""Bob""!")
                 if (inQuotes && !DataSource->End()) {
                     char nextChar;
                     if (DataSource->Get(nextChar)) {
                         if (nextChar == '"') {
-                            cell += '"';  // Add escaped quote
+                            // Escaped quote, add a single quote to cell
+                            cell += '"';
                         } else {
-                            DataSource->Unget(nextChar);  // Unget the character
-                            inQuotes = !inQuotes;  // Toggle quote mode
+                            // End of quoted section, keep the next character for processing
+                            inQuotes = false;
+                            cell += ch;  // Add the current quote
+                            cell += nextChar;
                         }
                     }
                 } else {
-                    inQuotes = !inQuotes;  // Toggle quote mode
+                    // Toggle quote mode if not handling escaped quotes
+                    inQuotes = !inQuotes;
+                    cell += ch;
                 }
             } else if (ch == Delimiter && !inQuotes) {
-                row.push_back(cell);  // Push cell when delimiter is hit outside quotes
+                // Add the cell to the row when hitting a delimiter outside quotes
+                row.push_back(cell);
                 cell.clear();
             } else {
+                // Regular character, just add to the cell
                 cell += ch;
             }
         }
