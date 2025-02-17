@@ -1,7 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Iinclude
-LDFLAGS = -lgtest -lgtest_main -pthread
+LDFLAGS = -lgtest -lgtest_main -pthread -lexpat
 
 # Directories
 SRC_DIR = src
@@ -15,10 +15,7 @@ TEST_FILES = $(wildcard $(TEST_DIR)/*.cpp)
 
 # Object files
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
-
-# Test object files for Google Test files
-GTEST_FILES = $(TEST_DIR)/StringUtilsTest.cpp $(TEST_DIR)/StringDataSourceTest.cpp $(TEST_DIR)/StringDataSinkTest.cpp
-GTEST_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(GTEST_FILES))
+TEST_OBJ_FILES = $(patsubst $(TEST_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(TEST_FILES))
 
 # Output binary
 GTEST_TARGET = $(BIN_DIR)/runtests
@@ -27,19 +24,20 @@ GTEST_TARGET = $(BIN_DIR)/runtests
 all: $(GTEST_TARGET)
 
 # Rule to build the Google Test binary
-$(GTEST_TARGET): $(OBJ_FILES) $(GTEST_OBJ_FILES)
+$(GTEST_TARGET): $(OBJ_FILES) $(TEST_OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
-# Rule to compile source files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	@mkdir -p $(OBJ_DIR)
+# Rule to compile source and test files
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Rule to compile test files
-$(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
-	@mkdir -p $(OBJ_DIR)
+$(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Ensure the object directory exists
+$(OBJ_DIR):
+	@mkdir -p $(OBJ_DIR)
 
 # Clean build artifacts
 clean:
