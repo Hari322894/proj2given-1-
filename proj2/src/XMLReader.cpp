@@ -8,7 +8,7 @@
 struct CXMLReader::SImplementation {
     //shared pointer to datasource in order for reading
     std::shared_ptr<CDataSource> DataSource;
-    //expat parser for XML parsing
+    //expat parser for XML parsing(included the expat.h)
     XML_Parser Parser;
     //queue to store XML entities as they are parsed
     std::queue<SXMLEntity> EntityQueue;
