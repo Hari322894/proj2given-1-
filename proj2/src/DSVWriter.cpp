@@ -1,5 +1,5 @@
-#include "DSVWriter.h"
-#include "DataSink.h"
+#include "DSVWriter.h" //use header file of dsvwriter to implement WriteRow
+#include "DataSink.h" //use datasink to implement Put()
 
 // implementing details of DSV Writer into struct function
 struct CDSVWriter::SImplementation {
