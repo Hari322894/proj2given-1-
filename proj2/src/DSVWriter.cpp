@@ -18,31 +18,28 @@ struct CDSVWriter::SImplementation {
     bool WriteRow(const std::vector<std::string>& row) {
         // iterate through each cell in the row
         for (size_t i = 0; i < row.size(); ++i) {
-            // determine if the cell needs to be enclosed in quotes
-            // a cell needs quotes if:
-            // QuoteAll is true, the cell contains the delimiter, the cell contains quotes
-            bool needsQuotes = QuoteAll || row[i].find(Delimiter) != std::string::npos || row[i].find('"') != std::string::npos;
-           //create an if statement here
-            if (needsQuotes) {
+            // to determine if the cell needs to be enclosed in quotes
+            // a cell needs quotes if: QuoteAll is true, the cell contains the delimiter, the cell contains quotes
+            bool quotes = QuoteAll || row[i].find(Delimiter) != std::string::npos || row[i].find('"') != std::string::npos;
+
+            // create an if statement here if a cell needs quotes
+            if (quotes) {
                 // start the quoted cell by writing an opening quote
                 Sink->Put('"');
                 // write each character of the cell with a for loop
                 for (char ch : row[i]) {
+                    // check if the character is a quote and escape it
                     if (ch == '"') {
-                        // escape quotes by writing two quotes
-                        Sink->Put('"');
-                        Sink->Put('"');
-                    } else {
-                        // write the regular character
-                        Sink->Put(ch);
+                        Sink->Put('"'); // escape quotes by writing two quotes
                     }
+                    Sink->Put(ch);
                 }
                 // close the quoted cell with a quote
                 Sink->Put('"');
             } else {
-                // If the cell doesn't need quotes, write it directly
-                //use a for loop to iterate through the characters
-                for (char ch : row[i]) {
+                // if the cell doesn't need quotes, write it directly
+                // use a for loop to iterate through the characters
+                for (const char& ch : row[i]) {
                     Sink->Put(ch);
                 }
             }
@@ -57,11 +54,11 @@ struct CDSVWriter::SImplementation {
     }
 };
 
-// Constructor for the CDSVWriter class
+// constructor for the CDSVWriter class
 CDSVWriter::CDSVWriter(std::shared_ptr<CDataSink> sink, char delimiter, bool quoteall)
     : DImplementation(std::make_unique<SImplementation>(sink, delimiter, quoteall)) {}
 
-// Destructor for the CDSVWriter class
+// destructor for the CDSVWriter class
 CDSVWriter::~CDSVWriter() = default;
 
 // write a row of data called here
